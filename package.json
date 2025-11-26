@@ -1,0 +1,25 @@
+{
+  "name": "ai-novel-trainer",
+  "version": "1.0.0",
+  "description": "AI 网文写作训练系统 - 利用 AI 生成练习题和评审反馈，帮助作者提升写作能力",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start",
+    "init-db": "cd server && node database/init.js",
+    "seed": "cd server && node database/seeds/prompts.js"
+  },
+  "keywords": [
+    "ai",
+    "writing",
+    "training",
+    "novel"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

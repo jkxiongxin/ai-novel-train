@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关键词功能测试</title>
+</head>
+<body>
+    <h1>关键词功能测试</h1>
+    <p>测试生成题目功能是否支持关键词和用户想法</p>
+    
+    <div>
+        <h2>测试1：带关键词的人物对白题目</h2>
+        <button onclick="testWithKeywords()">测试带关键词的题目生成</button>
+        <div id="result1"></div>
+    </div>
+    
+    <div>
+        <h2>测试2：带用户想法的情绪渲染题目</h2>
+        <button onclick="testWithUserIdea()">测试带用户想法的题目生成</button>
+        <div id="result2"></div>
+    </div>
+    
+    <script>
+        async function testWithKeywords() {
+            const resultDiv = document.getElementById('result1');
+            resultDiv.innerHTML = '正在测试...';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/questions/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: 'dialogue',
+                        difficulty: '中等',
+                        extraParams: {
+                            keywords: '修仙,门派,复仇',
+                            userIdea: '主角在悬崖边与仇人对峙，需要展现复杂的心理斗争'
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <h3>✅ 测试成功</h3>
+                        <p><strong>题目类型:</strong> ${data.data.type}</p>
+                        <p><strong>难度:</strong> ${data.data.difficulty}</p>
+                        <p><strong>标题:</strong> ${data.data.content.title}</p>
+                        <p><strong>背景:</strong> ${data.data.content.background.substring(0, 100)}...</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<h3>❌ 测试失败</h3><p>${data.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<h3>❌ 测试出错</h3><p>${error.message}</p>`;
+            }
+        }
+        
+        async function testWithUserIdea() {
+            const resultDiv = document.getElementById('result2');
+            resultDiv.innerHTML = '正在测试...';
+            
+            try {
+                const response = await fetch('http://localhost:3000/api/questions/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        type: 'emotion',
+                        difficulty: '困难',
+                        extraParams: {
+                            keywords: '失去,绝望,雨夜',
+                            userIdea: '角色在雨夜中得知亲人离世的消息'
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <h3>✅ 测试成功</h3>
+                        <p><strong>题目类型:</strong> ${data.data.type}</p>
+                        <p><strong>难度:</strong> ${data.data.difficulty}</p>
+                        <p><strong>标题:</strong> ${data.data.content.title}</p>
+                        <p><strong>目标情绪:</strong> ${data.data.content.targetEmotion}</p>
+                        <p><strong>情绪强度:</strong> ${data.data.content.emotionIntensity}</p>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `<h3>❌ 测试失败</h3><p>${data.message}</p>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<h3>❌ 测试出错</h3><p>${error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>

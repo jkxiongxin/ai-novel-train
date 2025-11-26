@@ -1,0 +1,20 @@
+{
+  "name": "ai-novel-trainer-server",
+  "version": "1.0.0",
+  "description": "AI 网络小说写作训练系统 - 后端服务",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js"
+  },
+  "keywords": ["ai", "novel", "writing", "training"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "better-sqlite3": "^12.4.6",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0"
+  }
+}
