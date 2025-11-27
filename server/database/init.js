@@ -49,14 +49,14 @@ async function initDatabase() {
       FOREIGN KEY (config_id) REFERENCES ai_config(id) ON DELETE SET NULL
     )
   `);
-
   // 初始化 AI 功能锚点
   const defaultFeatures = [
     { key: 'question_generate', name: '题目生成', description: '生成写作练习题目' },
     { key: 'evaluation', name: '作品评审', description: '对用户提交的作品进行 AI 评审' },
     { key: 'prompt_test', name: 'Prompt 测试', description: '测试 Prompt 模板效果' },
     { key: 'dictionary_search', name: '词典查词', description: 'AI 搜索相关词汇' },
-    { key: 'dictionary_generate', name: '词典生成', description: 'AI 生成专题词典' }
+    { key: 'dictionary_generate', name: '词典生成', description: 'AI 生成专题词典' },
+    { key: 'chapter_analyze', name: '章节分析', description: 'AI 分析章节内容，拆分片段并识别文风' }
   ];
 
   const insertFeature = db.prepare(`
@@ -200,6 +200,85 @@ async function initDatabase() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_dictionary_word ON dictionary_words(word);
     CREATE INDEX IF NOT EXISTS idx_dictionary_category ON dictionary_words(category);
+  `);
+
+  // 创建小说章节表（用于章节分析）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS novel_chapters (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      novel_name TEXT,
+      author TEXT,
+      content TEXT NOT NULL,
+      word_count INTEGER DEFAULT 0,
+      analysis_status TEXT DEFAULT 'pending',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 创建章节片段表（拆分后的片段）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS chapter_segments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      chapter_id INTEGER NOT NULL,
+      segment_order INTEGER NOT NULL,
+      content TEXT NOT NULL,
+      word_count INTEGER DEFAULT 0,
+      segment_type TEXT NOT NULL,
+      writing_style TEXT,
+      style_tags TEXT,
+      difficulty TEXT DEFAULT 'medium',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (chapter_id) REFERENCES novel_chapters(id) ON DELETE CASCADE
+    )
+  `);
+
+  // 创建抄书练习表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS typing_practices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      segment_id INTEGER,
+      custom_content TEXT,
+      original_content TEXT NOT NULL,
+      typed_content TEXT,
+      segment_type TEXT,
+      writing_style TEXT,
+      word_count INTEGER DEFAULT 0,
+      typed_count INTEGER DEFAULT 0,
+      accuracy REAL DEFAULT 0,
+      speed REAL DEFAULT 0,
+      time_spent INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'pending',
+      started_at DATETIME,
+      completed_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (segment_id) REFERENCES chapter_segments(id) ON DELETE SET NULL
+    )
+  `);
+
+  // 创建抄书统计表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS typing_statistics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      practice_date DATE NOT NULL,
+      segment_type TEXT,
+      writing_style TEXT,
+      total_practices INTEGER DEFAULT 0,
+      total_words INTEGER DEFAULT 0,
+      total_time INTEGER DEFAULT 0,
+      avg_accuracy REAL DEFAULT 0,
+      avg_speed REAL DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(practice_date, segment_type, writing_style)
+    )
+  `);
+
+  // 创建章节片段索引
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_segment_chapter ON chapter_segments(chapter_id);
+    CREATE INDEX IF NOT EXISTS idx_segment_type ON chapter_segments(segment_type);
+    CREATE INDEX IF NOT EXISTS idx_segment_style ON chapter_segments(writing_style);
   `);
 
   // 初始化默认设置

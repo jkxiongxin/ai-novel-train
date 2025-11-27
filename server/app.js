@@ -12,6 +12,8 @@ const evaluationsRoutes = require('./routes/evaluations');
 const statisticsRoutes = require('./routes/statistics');
 const settingsRoutes = require('./routes/settings');
 const dictionaryRoutes = require('./routes/dictionary');
+const chaptersRoutes = require('./routes/chapters');
+const typingRoutes = require('./routes/typing');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -30,6 +32,8 @@ app.use('/api/evaluations', evaluationsRoutes);
 app.use('/api/statistics', statisticsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/dictionary', dictionaryRoutes);
+app.use('/api/chapters', chaptersRoutes);
+app.use('/api/typing', typingRoutes);
 
 // 静态文件服务（生产环境）
 if (process.env.NODE_ENV === 'production') {

@@ -66,12 +66,35 @@ const routes = [
     name: 'Settings',
     component: () => import('../views/Settings/Index.vue'),
     meta: { title: '系统设置' }
-  },
-  {
+  },  {
     path: '/settings/ai',
     name: 'AISettings',
     component: () => import('../views/Settings/AI.vue'),
     meta: { title: 'AI 配置' }
+  },
+  {
+    path: '/chapters',
+    name: 'Chapters',
+    component: () => import('../views/Chapters/Index.vue'),
+    meta: { title: '章节管理' }
+  },
+  {
+    path: '/chapters/:id',
+    name: 'ChapterDetail',
+    component: () => import('../views/Chapters/Detail.vue'),
+    meta: { title: '章节详情' }
+  },
+  {
+    path: '/typing',
+    name: 'Typing',
+    component: () => import('../views/Typing/Index.vue'),
+    meta: { title: '抄书练习' }
+  },
+  {
+    path: '/typing/:id',
+    name: 'DoTyping',
+    component: () => import('../views/Typing/Do.vue'),
+    meta: { title: '抄书' }
   }
 ]
 

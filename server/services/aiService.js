@@ -9,7 +9,8 @@ const AI_FEATURES = {
   EVALUATION: 'evaluation',                  // 作品评审
   PROMPT_TEST: 'prompt_test',                // Prompt 测试
   DICTIONARY_SEARCH: 'dictionary_search',    // 词典查词
-  DICTIONARY_GENERATE: 'dictionary_generate' // 词典生成
+  DICTIONARY_GENERATE: 'dictionary_generate', // 词典生成
+  CHAPTER_ANALYZE: 'chapter_analyze'         // 章节分析
 };
 
 // 解密 API Key
@@ -227,6 +228,94 @@ async function getModelList(options) {
   }
 }
 
+// 分析章节内容
+async function analyzeChapter(content) {
+  const config = getConfigForFeature(AI_FEATURES.CHAPTER_ANALYZE);
+  
+  const systemPrompt = `你是一位专业的小说分析师，擅长分析文本结构和文风特征。
+请将给定的小说章节内容拆分成多个片段，并为每个片段标注类型和文风。
+
+片段类型（segment_type）包括：
+- dialogue: 人物对白（角色之间的对话内容）
+- emotion: 情绪渲染（情感氛围的描写）
+- battle: 战斗场景（动作打斗场面）
+- psychology: 心理活动（角色内心独白）
+- environment: 环境描写（场景环境描写）
+- plot: 情节推进（故事情节发展）
+- transition: 过渡衔接（段落之间的过渡）
+- narrative: 叙事描述（一般性叙述内容）
+
+文风类型（writing_style）包括：
+- concise: 简洁明快（用词精炼，节奏快速）
+- detailed: 细腻详尽（描写细致，铺陈丰富）
+- poetic: 诗意唯美（语言优美，意境深远）
+- humorous: 幽默诙谐（轻松有趣，富有笑点）
+- tense: 紧张刺激（节奏紧凑，悬念感强）
+- lyrical: 抒情感人（情感真挚，打动人心）
+- plain: 平实质朴（语言朴素，贴近生活）
+- grand: 大气磅礴（气势恢宏，格局宏大）
+
+难度等级（difficulty）：easy, medium, hard
+
+请以JSON格式返回分析结果，格式如下：
+{
+  "segments": [
+    {
+      "content": "片段内容",
+      "segment_type": "类型",
+      "writing_style": "文风",
+      "style_tags": ["标签1", "标签2"],
+      "difficulty": "难度"
+    }
+  ]
+}
+
+注意：
+1. 每个片段应该是相对完整的语义单元，通常在100-500字之间
+2. 对话片段应该包含完整的对话上下文
+3. style_tags可以包含更细致的风格标签，如"悲伤"、"激烈"、"温馨"等
+4. 确保返回的是有效的JSON格式`;
+
+  const messages = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: `请分析以下小说章节内容：\n\n${content}` }
+  ];
+
+  const result = await callAI({
+    baseUrl: config.baseUrl,
+    apiKey: config.apiKey,
+    model: config.model,
+    messages,
+    maxTokens: config.maxTokens || 8192,
+    temperature: 0.3,
+    timeout: config.timeout || 120000
+  });
+
+  // 解析返回的JSON
+  try {
+    // 尝试提取JSON内容
+    let jsonContent = result.content;
+    
+    // 如果内容被包裹在markdown代码块中，提取JSON
+    const jsonMatch = jsonContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonMatch) {
+      jsonContent = jsonMatch[1];
+    }
+    
+    const analysisResult = JSON.parse(jsonContent.trim());
+    
+    if (!analysisResult.segments || !Array.isArray(analysisResult.segments)) {
+      throw new Error('分析结果格式错误');
+    }
+    
+    return analysisResult;
+  } catch (parseError) {
+    console.error('解析AI返回结果失败:', parseError);
+    console.error('原始内容:', result.content);
+    throw new Error('分析结果解析失败，请重试');
+  }
+}
+
 module.exports = {
   AI_FEATURES,
   callAI,
@@ -234,5 +323,6 @@ module.exports = {
   callAIForFeature,
   getModelList,
   getActiveConfig,
-  getConfigForFeature
+  getConfigForFeature,
+  analyzeChapter
 };
