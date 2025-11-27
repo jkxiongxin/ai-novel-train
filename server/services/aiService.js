@@ -119,7 +119,7 @@ async function callAI(options) {
     messages,
     maxTokens = 4096,
     temperature = 0.7,
-    timeout = 60000
+    timeout = 1200000 // 20分钟
   } = options;
 
   const url = `${baseUrl.replace(/\/+$/, '')}/chat/completions`;
