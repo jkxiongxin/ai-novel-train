@@ -1,0 +1,139 @@
+{
+  "name": "ai-novel-trainer-desktop",
+  "version": "1.0.0",
+  "description": "AI 网文写作训练系统 - 桌面版",
+  "main": "main.js",
+  "author": "AI Novel Trainer Team",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dev": "concurrently \"npm run dev:client\" \"wait-on http://localhost:5173 && electron .\"",
+    "dev:client": "cd ../client && npm run dev",
+    "prebuild": "npm run build:client && npm run copy:server",
+    "build:client": "cd ../client && npm run build:electron",
+    "copy:server": "node scripts/copy-server.js",
+    "build": "npm run prebuild && electron-builder",
+    "build:mac": "npm run prebuild && electron-builder --mac",
+    "build:win": "npm run prebuild && electron-builder --win",
+    "build:all": "npm run prebuild && electron-builder --mac --win",
+    "publish": "npm run prebuild && electron-builder --publish always",
+    "publish:mac": "npm run prebuild && electron-builder --mac --publish always",
+    "publish:win": "npm run prebuild && electron-builder --win --publish always",
+    "publish:all": "npm run prebuild && electron-builder --mac --win --publish always",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.4.6",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.3.9",
+    "electron-log": "^5.2.4"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.7.1",
+    "concurrently": "^8.2.2",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.ai-novel-trainer.desktop",
+    "productName": "AI网文训练师",
+    "copyright": "Copyright © 2024 AI Novel Trainer",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "updater.js",
+      "client-dist/**/*",
+      "!**/*.db",
+      "!**/*.db-wal",
+      "!**/*.db-shm",
+      "!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/node_modules/*/{test,__tests__,tests,powered-test,example,examples}",
+      "!**/node_modules/.bin"
+    ],
+    "extraResources": [
+      {
+        "from": "server",
+        "to": "server",
+        "filter": ["**/*", "!**/*.db", "!**/*.db-wal", "!**/*.db-shm"]
+      }
+    ],
+    "extraMetadata": {
+      "main": "main.js"
+    },
+    "asar": true,
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "build/icon.icns",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64", "ia32"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AI网文训练师"
+    },
+    "linux": {
+      "icon": "build/icons",
+      "target": ["AppImage", "deb"],
+      "category": "Office"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "jkxiongxin",
+      "repo": "ai-novel-train",
+      "releaseType": "release"
+    }
+  }
+}

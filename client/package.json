@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:electron": "BUILD_TARGET=electron vite build --config vite.config.electron.js",
     "preview": "vite preview"
   },
   "dependencies": {

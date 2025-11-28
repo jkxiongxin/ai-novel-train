@@ -3,7 +3,20 @@ const path = require('path');
 const fs = require('fs');
 const { seedDefaultPrompts } = require('./seeds/prompts');
 
-const DB_PATH = path.join(__dirname, 'novel_trainer.db');
+// 支持通过环境变量自定义数据库路径（用于 Electron 桌面版）
+const getDbPath = () => {
+  if (process.env.DB_PATH) {
+    // 确保目录存在
+    const dbDir = path.dirname(process.env.DB_PATH);
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
+    return process.env.DB_PATH;
+  }
+  return path.join(__dirname, 'novel_trainer.db');
+};
+
+const DB_PATH = getDbPath();
 
 let db = null;
 

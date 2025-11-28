@@ -6,7 +6,12 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
+    "dev:desktop": "cd desktop && npm run dev",
     "build": "cd client && npm run build",
+    "build:desktop": "cd desktop && npm run build",
+    "build:desktop:mac": "cd desktop && npm run build:mac",
+    "build:desktop:win": "cd desktop && npm run build:win",
+    "build:desktop:all": "cd desktop && npm run build:all",
     "start": "cd server && npm start",
     "init-db": "cd server && node database/init.js",
     "seed": "cd server && node database/seeds/prompts.js"

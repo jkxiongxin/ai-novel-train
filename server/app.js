@@ -40,7 +40,8 @@ app.use('/api/freewrite', freewriteRoutes);
 // 静态文件服务（生产环境）
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../client/dist')));
-  app.get('*', (req, res) => {
+  // Express 5 需要使用命名通配符参数
+  app.get('/{*splat}', (req, res) => {
     res.sendFile(path.join(__dirname, '../client/dist/index.html'));
   });
 }
