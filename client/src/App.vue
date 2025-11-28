@@ -11,7 +11,8 @@ import {
   Reading,
   Menu as MenuIcon,
   Notebook,
-  EditPen
+  EditPen,
+  Sunrise
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -20,6 +21,7 @@ const isCollapse = ref(false)
 const menuItems = [
   { path: '/', icon: House, title: '首页' },
   { path: '/practice', icon: Edit, title: '写作练习' },
+  { path: '/freewrite', icon: Sunrise, title: '随心练习' },
   { path: '/typing', icon: EditPen, title: '抄书练习' },
   { path: '/chapters', icon: Notebook, title: '章节管理' },
   { path: '/questions', icon: Document, title: '题库管理' },
@@ -33,6 +35,7 @@ const menuItems = [
 const activeMenu = computed(() => {
   const path = route.path
   if (path.startsWith('/practice')) return '/practice'
+  if (path.startsWith('/freewrite')) return '/freewrite'
   if (path.startsWith('/typing')) return '/typing'
   if (path.startsWith('/chapters')) return '/chapters'
   if (path.startsWith('/settings')) return '/settings'

@@ -14,6 +14,7 @@ const settingsRoutes = require('./routes/settings');
 const dictionaryRoutes = require('./routes/dictionary');
 const chaptersRoutes = require('./routes/chapters');
 const typingRoutes = require('./routes/typing');
+const freewriteRoutes = require('./routes/freewrite');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -34,6 +35,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/dictionary', dictionaryRoutes);
 app.use('/api/chapters', chaptersRoutes);
 app.use('/api/typing', typingRoutes);
+app.use('/api/freewrite', freewriteRoutes);
 
 // 静态文件服务（生产环境）
 if (process.env.NODE_ENV === 'production') {

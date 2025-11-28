@@ -274,6 +274,50 @@ async function initDatabase() {
     )
   `);
 
+  // 创建随心练习表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS freewrite_practices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT DEFAULT '随心练习',
+      content TEXT,
+      word_count INTEGER DEFAULT 0,
+      time_spent INTEGER DEFAULT 0,
+      pomodoro_duration INTEGER,
+      status TEXT DEFAULT 'writing',
+      finish_type TEXT,
+      parent_id INTEGER,
+      finished_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (parent_id) REFERENCES freewrite_practices(id) ON DELETE SET NULL
+    )
+  `);
+
+  // 创建随心练习评审表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS freewrite_reviews (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      practice_id INTEGER NOT NULL,
+      review_type TEXT NOT NULL,
+      score REAL,
+      comment TEXT,
+      tags TEXT,
+      dimension_scores TEXT,
+      highlights TEXT,
+      improvements TEXT,
+      raw_response TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (practice_id) REFERENCES freewrite_practices(id) ON DELETE CASCADE
+    )
+  `);
+
+  // 创建随心练习索引
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_freewrite_status ON freewrite_practices(status);
+    CREATE INDEX IF NOT EXISTS idx_freewrite_parent ON freewrite_practices(parent_id);
+    CREATE INDEX IF NOT EXISTS idx_freewrite_review_practice ON freewrite_reviews(practice_id);
+  `);
+
   // 创建章节片段索引
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_segment_chapter ON chapter_segments(chapter_id);

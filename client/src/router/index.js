@@ -95,6 +95,30 @@ const routes = [
     name: 'DoTyping',
     component: () => import('../views/Typing/Do.vue'),
     meta: { title: '抄书' }
+  },
+  {
+    path: '/freewrite',
+    name: 'Freewrite',
+    component: () => import('../views/Freewrite/Index.vue'),
+    meta: { title: '随心练习' }
+  },
+  {
+    path: '/freewrite/do',
+    name: 'FreewriteDo',
+    component: () => import('../views/Freewrite/Do.vue'),
+    meta: { title: '随心写作' }
+  },
+  {
+    path: '/freewrite/do/:id',
+    name: 'FreewriteContinue',
+    component: () => import('../views/Freewrite/Do.vue'),
+    meta: { title: '继续写作' }
+  },
+  {
+    path: '/freewrite/:id',
+    name: 'FreewriteDetail',
+    component: () => import('../views/Freewrite/Detail.vue'),
+    meta: { title: '练习详情' }
   }
 ]
 

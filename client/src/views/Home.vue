@@ -167,6 +167,25 @@ onMounted(async () => {
       </div>
     </el-card>
     
+    <!-- 随心练习入口 -->
+    <el-card class="freewrite-entry" @click="$router.push('/freewrite')">
+      <div class="freewrite-content">
+        <div class="freewrite-left">
+          <div class="freewrite-icon">✍️</div>
+          <div class="freewrite-info">
+            <h3>随心练习</h3>
+            <p>自由写作，释放表达欲，培养输出习惯</p>
+          </div>
+        </div>
+        <div class="freewrite-features">
+          <el-tag size="small" type="success">🍅 番茄时间</el-tag>
+          <el-tag size="small" type="info">📖 支持续写</el-tag>
+          <el-tag size="small" type="warning">✨ AI评审</el-tag>
+        </div>
+        <el-icon class="freewrite-arrow"><ArrowRight /></el-icon>
+      </div>
+    </el-card>
+    
     <!-- 最近7天 -->
     <el-card class="recent-stats">
       <template #header>
@@ -321,5 +340,63 @@ onMounted(async () => {
 .recent-tip {
   color: #909399;
   font-size: 14px;
+}
+
+/* 随心练习入口 */
+.freewrite-entry {
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.freewrite-entry:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.freewrite-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.freewrite-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+}
+
+.freewrite-icon {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+}
+
+.freewrite-info h3 {
+  margin: 0 0 4px;
+  font-size: 18px;
+  color: #303133;
+}
+
+.freewrite-info p {
+  margin: 0;
+  font-size: 14px;
+  color: #909399;
+}
+
+.freewrite-features {
+  display: flex;
+  gap: 8px;
+}
+
+.freewrite-arrow {
+  font-size: 20px;
+  color: #909399;
 }
 </style>
