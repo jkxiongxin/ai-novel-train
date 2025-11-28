@@ -12,6 +12,7 @@ import {
   saveFeatureConfigsBatch
 } from '../../api/aiConfig'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { isMobile } from '../../utils/device'
 
 const loading = ref(true)
 const saving = ref(false)
@@ -489,8 +490,10 @@ onMounted(async () => {
     <el-dialog 
       v-model="showConfigDialog" 
       :title="configDialogTitle"
-      width="700px"
+      :width="isMobile ? '95%' : '700px'"
+      :fullscreen="isMobile"
       destroy-on-close
+      class="config-dialog"
     >
       <el-form label-width="140px">
         <el-form-item label="配置名称" required>
@@ -656,5 +659,137 @@ onMounted(async () => {
 .model-select-container {
   display: flex;
   align-items: center;
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+  .ai-settings-page {
+    padding: 12px;
+  }
+  
+  .page-header h1 {
+    font-size: 18px;
+  }
+  
+  .tip-alert {
+    font-size: 13px;
+  }
+  
+  .tab-header {
+    justify-content: flex-start;
+  }
+  
+  .batch-form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .batch-form .el-select {
+    width: 100% !important;
+  }
+  
+  .batch-form .el-button {
+    margin-left: 0 !important;
+  }
+  
+  .provider-buttons {
+    gap: 6px;
+  }
+  
+  .provider-buttons .el-button {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+  
+  .model-select-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  
+  .model-select-container .el-select {
+    width: 100% !important;
+  }
+  
+  .model-select-container .el-button {
+    margin-left: 0 !important;
+  }
+}
+
+/* 移动端对话框样式 */
+.config-dialog :deep(.el-dialog__body) {
+  padding: 16px;
+}
+
+@media (max-width: 768px) {
+  .config-dialog :deep(.el-dialog) {
+    margin: 0 !important;
+    border-radius: 0;
+  }
+  
+  .config-dialog :deep(.el-dialog__header) {
+    padding: 12px 16px;
+    border-bottom: 1px solid #ebeef5;
+  }
+  
+  .config-dialog :deep(.el-dialog__body) {
+    padding: 12px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+  
+  .config-dialog :deep(.el-dialog__footer) {
+    padding: 12px 16px;
+    border-top: 1px solid #ebeef5;
+    display: flex;
+    gap: 8px;
+  }
+  
+  .config-dialog :deep(.el-dialog__footer .el-button) {
+    flex: 1;
+    margin: 0 !important;
+  }
+  
+  .config-dialog :deep(.el-form-item) {
+    margin-bottom: 16px;
+  }
+  
+  .config-dialog :deep(.el-form-item__label) {
+    float: none;
+    display: block;
+    text-align: left;
+    margin-bottom: 6px;
+    padding: 0;
+    width: auto !important;
+    font-size: 13px;
+  }
+  
+  .config-dialog :deep(.el-form-item__content) {
+    margin-left: 0 !important;
+  }
+  
+  .config-dialog :deep(.el-input),
+  .config-dialog :deep(.el-textarea),
+  .config-dialog :deep(.el-select) {
+    width: 100%;
+  }
+  
+  .config-dialog :deep(.el-input-number) {
+    width: 100%;
+  }
+  
+  .config-dialog :deep(.el-slider) {
+    max-width: 100% !important;
+    width: 100%;
+  }
+  
+  .config-dialog :deep(.el-slider__runway) {
+    margin: 12px 0;
+  }
+  
+  .config-dialog :deep(.el-slider .el-input-number) {
+    width: 100px;
+  }
 }
 </style>

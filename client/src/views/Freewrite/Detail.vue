@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ArrowLeft } from '@element-plus/icons-vue'
 import { getFreewrite, submitSelfReview, requestAIReview, deleteFreewrite } from '../../api/freewrite'
 import { ElMessage, ElMessageBox } from 'element-plus'
 

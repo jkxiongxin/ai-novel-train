@@ -421,6 +421,8 @@ onUnmounted(() => {
 <style scoped>
 .typing-practice {
   padding: 20px;
+  /* 移动端安全区域适配 */
+  padding-top: calc(20px + env(safe-area-inset-top, 0px));
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -584,5 +586,103 @@ onUnmounted(() => {
   display: flex;
   justify-content: center;
   gap: 16px;
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+  .typing-practice {
+    padding: 12px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+  }
+  
+  .page-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .page-header .el-button {
+    align-self: flex-start;
+  }
+  
+  .header-info h1 {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  
+  .meta {
+    flex-wrap: wrap;
+    gap: 8px;
+    font-size: 12px;
+  }
+  
+  .stats-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .stat-item {
+    flex: 1;
+    min-width: 60px;
+  }
+  
+  .stat-item .value {
+    font-size: 16px;
+  }
+  
+  .stat-item .label {
+    font-size: 10px;
+  }
+  
+  .original-text {
+    font-size: 15px;
+    line-height: 1.8;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .card-header .el-progress {
+    width: 100% !important;
+  }
+  
+  .start-prompt {
+    padding: 20px;
+  }
+  
+  .typing-area :deep(.el-textarea__inner) {
+    font-size: 15px;
+    line-height: 1.8;
+  }
+  
+  .result-stats {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  
+  .result-item {
+    flex: 1;
+    min-width: 80px;
+  }
+  
+  .result-value {
+    font-size: 24px;
+  }
+  
+  .result-label {
+    font-size: 12px;
+  }
+  
+  .result-actions {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .result-actions .el-button {
+    width: 100%;
+  }
 }
 </style>

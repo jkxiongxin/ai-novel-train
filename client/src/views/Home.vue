@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getOverview } from '../api/statistics'
-import { getAIConfig } from '../api/aiConfig'
+import { getAIConfig, getAIConfigs } from '../api/aiConfig'
 
 const router = useRouter()
 const loading = ref(true)
@@ -56,9 +56,9 @@ function goToAISettings() {
 
 onMounted(async () => {
   try {
-    // 检查 AI 配置
-    const configRes = await getAIConfig()
-    hasAIConfig.value = !!configRes.data
+    // 检查 AI 配置 - 检查是否存在任何配置（不只是激活的）
+    const configRes = await getAIConfigs()
+    hasAIConfig.value = configRes.data && configRes.data.length > 0
     
     // 获取统计数据
     const statsRes = await getOverview()

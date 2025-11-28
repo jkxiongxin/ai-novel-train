@@ -11,6 +11,7 @@ import {
   useWord,
   getCategories
 } from '../api/dictionary'
+import { isMobile } from '../utils/device'
 
 const props = defineProps({
   visible: {
@@ -57,6 +58,12 @@ const dialogVisible = computed({
   get: () => props.visible,
   set: (val) => emit('update:visible', val)
 })
+
+// 抽屉方向：移动端从下方弹出，桌面端从右侧
+const drawerDirection = computed(() => isMobile ? 'btt' : 'rtl')
+
+// 抽屉大小：移动端占 66% 高度，桌面端宽度 450px
+const drawerSize = computed(() => isMobile ? '66%' : '450px')
 
 // AI 搜索
 async function handleSearch() {
@@ -243,9 +250,10 @@ watch(selectedCategory, () => {
   <el-drawer
     v-model="dialogVisible"
     title="AI 写作词典"
-    direction="rtl"
-    size="450px"
+    :direction="drawerDirection"
+    :size="drawerSize"
     :append-to-body="true"
+    class="dictionary-drawer"
   >
     <el-tabs v-model="activeTab" class="dictionary-tabs">
       <!-- AI 查词 -->
@@ -433,8 +441,9 @@ watch(selectedCategory, () => {
     <el-dialog
       v-model="addDialogVisible"
       title="添加词汇"
-      width="400px"
+      :width="isMobile ? '90%' : '400px'"
       :append-to-body="true"
+      class="add-word-dialog"
     >
       <el-form label-width="80px">
         <el-form-item label="词汇" required>
@@ -614,5 +623,128 @@ export default {
   margin-top: 20px;
   border-top: 1px solid #ebeef5;
   padding-top: 16px;
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+  .dictionary-drawer :deep(.el-drawer) {
+    border-radius: 16px 16px 0 0;
+  }
+  
+  .dictionary-drawer :deep(.el-drawer__header) {
+    padding: 12px 16px;
+    margin-bottom: 0;
+    border-bottom: 1px solid #ebeef5;
+  }
+  
+  .dictionary-drawer :deep(.el-drawer__title) {
+    font-size: 16px;
+  }
+  
+  .dictionary-drawer :deep(.el-drawer__body) {
+    padding: 12px;
+  }
+  
+  .dictionary-tabs :deep(.el-tabs__header) {
+    margin-bottom: 12px;
+  }
+  
+  .dictionary-tabs :deep(.el-tabs__nav) {
+    width: 100%;
+  }
+  
+  .dictionary-tabs :deep(.el-tabs__item) {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    padding: 0 12px;
+  }
+  
+  .dictionary-tabs :deep(.el-tabs__content) {
+    height: calc(100% - 50px);
+  }
+  
+  .search-section {
+    margin-bottom: 12px;
+  }
+  
+  .search-section .el-input {
+    font-size: 14px;
+  }
+  
+  .search-tips {
+    margin-top: 8px;
+    font-size: 12px;
+  }
+  
+  .search-tips .el-tag {
+    margin-bottom: 4px;
+  }
+  
+  .word-item {
+    padding: 10px;
+  }
+  
+  .word-main {
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  
+  .word-text {
+    font-size: 15px;
+  }
+  
+  .word-meaning {
+    font-size: 12px;
+    margin-bottom: 4px;
+  }
+  
+  .word-example {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+  
+  .word-actions {
+    gap: 6px;
+  }
+  
+  .word-actions .el-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .library-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .library-header .el-select {
+    width: 100% !important;
+  }
+  
+  .library-header .el-button {
+    width: 100%;
+  }
+  
+  .generate-section {
+    padding: 8px 0;
+  }
+  
+  .generate-section .el-slider {
+    width: calc(100% - 80px);
+  }
+  
+  .results-header {
+    font-size: 13px;
+  }
+  
+  .loading-section {
+    padding: 30px;
+  }
+  
+  .loading-section .el-icon {
+    font-size: 28px;
+  }
 }
 </style>

@@ -457,6 +457,8 @@ onUnmounted(() => {
   height: calc(100vh - 40px);
   margin: -20px;
   background: #fff;
+  /* 移动端安全区域适配 */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .freewrite-do.fullscreen {
@@ -468,6 +470,7 @@ onUnmounted(() => {
   z-index: 1000;
   height: 100vh;
   margin: 0;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .toolbar {
@@ -712,5 +715,138 @@ onUnmounted(() => {
 .dictionary-fab .el-button:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+  .freewrite-do {
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  
+  .toolbar-left {
+    order: 1;
+    flex: 1;
+    min-width: 100%;
+    gap: 8px;
+  }
+  
+  .toolbar-left .el-button {
+    padding: 8px;
+  }
+  
+  .toolbar-left .el-button span {
+    display: none;
+  }
+  
+  .title-input {
+    flex: 1;
+    width: auto;
+  }
+  
+  .title-input :deep(.el-input__inner) {
+    font-size: 14px;
+  }
+  
+  .toolbar-center {
+    order: 2;
+    flex: 1;
+    justify-content: flex-start;
+    gap: 12px;
+  }
+  
+  .pomodoro-timer {
+    padding: 4px 10px;
+    font-size: 14px;
+  }
+  
+  .pomodoro-icon {
+    font-size: 14px;
+  }
+  
+  .pomodoro-time {
+    font-size: 14px;
+  }
+  
+  .word-count {
+    font-size: 14px;
+  }
+  
+  .word-count .count {
+    font-size: 16px;
+  }
+  
+  .timer {
+    font-size: 13px;
+    padding: 2px 8px;
+    gap: 4px;
+  }
+  
+  .toolbar-right {
+    order: 3;
+    gap: 6px;
+  }
+  
+  .toolbar-right .el-button {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .toolbar-right .el-button:first-child {
+    display: none; /* 隐藏全屏按钮 */
+  }
+  
+  .main-content {
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .writing-area {
+    flex: 1;
+    min-height: 0;
+  }
+  
+  .writing-input :deep(.el-textarea__inner) {
+    font-size: 15px;
+    line-height: 1.8;
+    padding: 12px;
+    min-height: calc(100vh - 220px) !important;
+  }
+  
+  .tip-panel {
+    display: none; /* 移动端隐藏提示面板 */
+  }
+  
+  .status-bar {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+  
+  .status-bar .tips {
+    display: none; /* 移动端隐藏快捷键提示 */
+  }
+  
+  .dictionary-fab {
+    right: 16px;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  
+  .dictionary-fab .el-button {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .dictionary-fab .el-button .el-icon {
+    font-size: 20px !important;
+  }
 }
 </style>

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getSettings, updateSettings } from '../../api/settings'
+import { isNativeApp } from '../../utils/request'
 import { ElMessage } from 'element-plus'
 
 const loading = ref(true)
@@ -16,6 +17,9 @@ const settings = ref({
   notificationSound: true
 })
 
+// 是否是移动端 APP
+const isMobileApp = ref(isNativeApp())
+
 const fontFamilyOptions = [
   { label: '系统默认', value: 'system' },
   { label: '思源宋体', value: 'source-han-serif' },
@@ -28,7 +32,28 @@ async function loadSettings() {
   try {
     loading.value = true
     const res = await getSettings()
-    settings.value = { ...settings.value, ...res.data }
+    // 确保数值类型字段为数字（API 可能返回字符串）
+    const data = res.data
+    if (data.editorFontSize !== undefined) {
+      data.editorFontSize = Number(data.editorFontSize)
+    }
+    if (data.autoSaveInterval !== undefined) {
+      data.autoSaveInterval = Number(data.autoSaveInterval)
+    }
+    if (data.defaultWritingTime !== undefined) {
+      data.defaultWritingTime = Number(data.defaultWritingTime)
+    }
+    // 确保布尔类型字段为布尔值
+    if (data.showWordCount !== undefined) {
+      data.showWordCount = data.showWordCount === true || data.showWordCount === 'true' || data.showWordCount === 1
+    }
+    if (data.showTimer !== undefined) {
+      data.showTimer = data.showTimer === true || data.showTimer === 'true' || data.showTimer === 1
+    }
+    if (data.notificationSound !== undefined) {
+      data.notificationSound = data.notificationSound === true || data.notificationSound === 'true' || data.notificationSound === 1
+    }
+    settings.value = { ...settings.value, ...data }
   } catch (error) {
     console.error('加载设置失败:', error)
   } finally {
@@ -72,6 +97,16 @@ onMounted(() => {
     <div class="page-header">
       <h1>系统设置</h1>
     </div>
+    
+    <!-- 移动端提示 -->
+    <el-card v-if="isMobileApp" class="settings-card mobile-info-card">
+      <template #header>
+        <span>📱 移动端模式</span>
+      </template>
+      <p class="mobile-info-text">
+        您正在使用移动端 APP，所有数据将保存在本地设备中。
+      </p>
+    </el-card>
     
     <el-card class="settings-card">
       <template #header>
@@ -235,5 +270,144 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 12px;
   margin-top: 24px;
+}
+
+.mobile-info-card {
+  border: 2px solid #67c23a;
+}
+
+.mobile-info-card :deep(.el-card__header) {
+  background: #f0f9eb;
+}
+
+.mobile-info-text {
+  margin: 0;
+  color: #67c23a;
+  font-size: 14px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .settings-page {
+    padding: 12px;
+  }
+  
+  .page-header {
+    margin-bottom: 16px;
+  }
+  
+  .page-header h1 {
+    font-size: 18px;
+  }
+  
+  .settings-card {
+    margin-bottom: 12px;
+  }
+  
+  .settings-card :deep(.el-card__header) {
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+  
+  .settings-card :deep(.el-card__body) {
+    padding: 12px;
+  }
+  
+  .settings-card :deep(.el-form-item) {
+    margin-bottom: 16px;
+  }
+  
+  .settings-card :deep(.el-form-item__label) {
+    float: none;
+    display: block;
+    text-align: left;
+    margin-bottom: 8px;
+    padding: 0;
+    width: auto !important;
+    font-size: 14px;
+    color: #606266;
+  }
+  
+  .settings-card :deep(.el-form-item__content) {
+    margin-left: 0 !important;
+  }
+  
+  .settings-card :deep(.el-radio-group) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .settings-card :deep(.el-radio-button) {
+    flex: 1;
+    min-width: 80px;
+  }
+  
+  .settings-card :deep(.el-radio-button__inner) {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  .settings-card :deep(.el-slider) {
+    max-width: 100% !important;
+    width: 100%;
+  }
+  
+  .settings-card :deep(.el-slider__runway) {
+    margin: 12px 0;
+  }
+  
+  .settings-card :deep(.el-slider .el-input-number) {
+    width: 80px;
+  }
+  
+  .settings-card :deep(.el-select) {
+    width: 100% !important;
+  }
+  
+  .settings-card :deep(.el-input-number) {
+    width: 120px;
+  }
+  
+  .input-hint {
+    margin-left: 8px;
+    font-size: 13px;
+  }
+  
+  .ai-config-item {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    padding: 12px;
+  }
+  
+  .ai-config-desc {
+    font-size: 13px;
+  }
+  
+  .ai-config-item .el-button {
+    width: 100%;
+  }
+  
+  .actions {
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 16px;
+    padding: 0 12px 20px;
+  }
+  
+  .actions .el-button {
+    width: 100%;
+    margin: 0;
+  }
+  
+  .mobile-info-card {
+    margin-bottom: 12px;
+  }
+  
+  .mobile-info-text {
+    font-size: 13px;
+  }
 }
 </style>

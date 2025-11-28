@@ -1,0 +1,21 @@
+{
+  "name": "小说写作训练",
+  "short_name": "写作训练",
+  "description": "AI 驱动的小说写作训练系统，帮助你提升写作能力",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#409eff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/vite.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "categories": ["education", "productivity"],
+  "lang": "zh-CN",
+  "dir": "ltr"
+}

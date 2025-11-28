@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
+import MobileNav from './components/MobileNav.vue'
 import {
   House,
   Edit,
@@ -17,6 +18,12 @@ import {
 
 const route = useRoute()
 const isCollapse = ref(false)
+
+// 需要隐藏底部导航的页面（沉浸式页面）
+const hideNavRoutes = ['/practice/', '/freewrite/do', '/typing/']
+const showMobileNav = computed(() => {
+  return !hideNavRoutes.some(r => route.path.includes(r))
+})
 
 const menuItems = [
   { path: '/', icon: House, title: '首页' },
@@ -46,7 +53,8 @@ const activeMenu = computed(() => {
 </script>
 
 <template>
-  <el-container class="app-container">
+  <!-- 桌面端布局 - 通过 CSS 媒体查询控制显示 -->
+  <el-container class="app-container desktop-only">
     <!-- 侧边栏 -->
     <el-aside :width="isCollapse ? '64px' : '200px'" class="app-aside">
       <div class="logo">
@@ -84,6 +92,18 @@ const activeMenu = computed(() => {
       </router-view>
     </el-main>
   </el-container>
+  
+  <!-- 移动端布局 - 通过 CSS 媒体查询控制显示 -->
+  <div class="app-mobile mobile-only">
+    <main class="mobile-main" :class="{ 'has-nav': showMobileNav }">
+      <router-view v-slot="{ Component }">
+        <transition name="fade" mode="out-in">
+          <component :is="Component" />
+        </transition>
+      </router-view>
+    </main>
+    <MobileNav v-show="showMobileNav" />
+  </div>
 </template>
 
 <style>
@@ -98,6 +118,26 @@ html, body, #app {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
+/* ===== 响应式显示控制 ===== */
+.desktop-only {
+  display: flex;
+}
+
+.mobile-only {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .desktop-only {
+    display: none !important;
+  }
+  
+  .mobile-only {
+    display: block !important;
+  }
+}
+
+/* ===== 桌面端样式 ===== */
 .app-container {
   height: 100vh;
 }
@@ -159,7 +199,25 @@ html, body, #app {
   overflow-y: auto;
 }
 
-/* 过渡动画 */
+/* ===== 移动端样式 ===== */
+.app-mobile {
+  min-height: 100vh;
+  background: #f5f7fa;
+  /* 适配状态栏安全区域 */
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.mobile-main {
+  min-height: calc(100vh - env(safe-area-inset-top, 0px));
+  padding: 16px;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mobile-main.has-nav {
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ===== 过渡动画 ===== */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -168,5 +226,13 @@ html, body, #app {
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* ===== 移动端安全区域 CSS 变量 ===== */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
 }
 </style>

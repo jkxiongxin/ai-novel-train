@@ -1,0 +1,12 @@
+{
+  "appId": "com.ainovel.trainer",
+  "appName": "AI网文训练师",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}

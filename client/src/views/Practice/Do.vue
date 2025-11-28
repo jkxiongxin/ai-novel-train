@@ -6,6 +6,7 @@ import { requestEvaluation } from '../../api/evaluations'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useIntervalFn, useDebounceFn } from '@vueuse/core'
 import DictionaryDrawer from '../../components/DictionaryDrawer.vue'
+import { isMobile } from '../../utils/device'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,6 +22,12 @@ const isFullscreen = ref(false)
 
 // 词典
 const dictionaryVisible = ref(false)
+
+// 移动端题目信息抽屉
+const questionDrawerVisible = ref(false)
+
+// 组件是否已卸载
+const isUnmounted = ref(false)
 
 // 计时器
 const timeSpent = ref(0)
@@ -68,7 +75,8 @@ function formatTime(seconds) {
 
 // 自动保存（防抖）
 const autoSave = useDebounceFn(async () => {
-  if (!content.value || saving.value) return
+  // 检查 practiceId 是否有效，以及组件是否已卸载
+  if (isUnmounted.value || !practiceId.value || !content.value || saving.value) return
   
   try {
     saving.value = true
@@ -206,6 +214,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  // 标记组件已卸载，阻止待执行的自动保存
+  isUnmounted.value = true
   pauseTimer()
   document.removeEventListener('keydown', handleKeydown)
 })
@@ -218,11 +228,16 @@ onUnmounted(() => {
       <div class="toolbar-left">
         <el-button @click="$router.back()" :disabled="isFullscreen">
           <el-icon><ArrowLeft /></el-icon>
-          返回
+          <span class="btn-text">返回</span>
         </el-button>
         <span class="practice-title">
           {{ practice?.question_title }}
         </span>
+        <!-- 移动端题目查看按钮 -->
+        <el-button v-if="isMobile" class="mobile-question-btn" @click="questionDrawerVisible = true" type="info" plain size="small">
+          <el-icon><Document /></el-icon>
+          题目
+        </el-button>
       </div>
       
       <div class="toolbar-center">
@@ -245,7 +260,8 @@ onUnmounted(() => {
           <el-icon><FullScreen v-if="!isFullscreen" /><Close v-else /></el-icon>
         </el-button>
         <el-button @click="save" :loading="saving">
-          保存草稿
+          <span class="btn-text">保存草稿</span>
+          <span class="btn-text-short">保存</span>
         </el-button>
         <el-button
           type="primary"
@@ -414,6 +430,117 @@ onUnmounted(() => {
       :context="content"
       @select="handleDictionarySelect"
     />
+    
+    <!-- 移动端题目信息抽屉 -->
+    <el-drawer
+      v-model="questionDrawerVisible"
+      title="📋 题目信息"
+      :direction="isMobile ? 'btt' : 'rtl'"
+      :size="isMobile ? '75%' : '400px'"
+      class="question-drawer"
+    >
+      <div v-if="practice?.question_content" class="question-detail-drawer">
+        <div class="info-tags">
+          <el-tag size="small">{{ practice.question_type }}</el-tag>
+          <el-tag size="small" type="info">{{ practice.difficulty }}</el-tag>
+        </div>
+        
+        <div v-if="practice.question_content.background" class="section">
+          <h4>📖 场景背景</h4>
+          <p>{{ practice.question_content.background }}</p>
+        </div>
+        
+        <div v-if="practice.question_content.characters" class="section">
+          <h4>👥 角色设定</h4>
+          <div class="characters">
+            <div
+              v-for="char in practice.question_content.characters"
+              :key="char.name"
+              class="character-card"
+            >
+              <div class="char-name">{{ char.name }}</div>
+              <div class="char-info">身份: {{ char.identity }}</div>
+              <div v-if="char.personality" class="char-info">性格: {{ char.personality }}</div>
+              <div v-if="char.currentEmotion" class="char-info">
+                情绪: {{ char.currentEmotion }}
+              </div>
+              <div v-if="char.speakingStyle" class="char-info">
+                说话风格: {{ char.speakingStyle }}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 单个角色（情绪渲染等） -->
+        <div v-if="practice.question_content.character" class="section">
+          <h4>👤 角色设定</h4>
+          <div class="character-card">
+            <div class="char-name">{{ practice.question_content.character.name }}</div>
+            <div class="char-info">身份: {{ practice.question_content.character.identity }}</div>
+            <div v-if="practice.question_content.character.personality" class="char-info">
+              性格: {{ practice.question_content.character.personality }}
+            </div>
+            <div v-if="practice.question_content.character.emotionalTrigger" class="char-info">
+              情绪触发: {{ practice.question_content.character.emotionalTrigger }}
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="practice.question_content.objective" class="section">
+          <h4>🎯 目标要求</h4>
+          <p>{{ practice.question_content.objective }}</p>
+        </div>
+        
+        <!-- 目标情绪 -->
+        <div v-if="practice.question_content.targetEmotion" class="section">
+          <h4>🎭 目标情绪</h4>
+          <p>
+            {{ practice.question_content.targetEmotion }}
+            <span v-if="practice.question_content.emotionIntensity">
+              (强度: {{ practice.question_content.emotionIntensity }})
+            </span>
+          </p>
+        </div>
+        
+        <!-- 约束条件 -->
+        <div v-if="practice.question_content.constraints?.length" class="section">
+          <h4>⚠️ 约束条件</h4>
+          <ul class="list-items">
+            <li v-for="(c, i) in practice.question_content.constraints" :key="i">{{ c }}</li>
+          </ul>
+        </div>
+        
+        <!-- 写作要求 -->
+        <div v-if="practice.question_content.requirements?.length" class="section">
+          <h4>📝 写作要求</h4>
+          <ul class="list-items">
+            <li v-for="(r, i) in practice.question_content.requirements" :key="i">{{ r }}</li>
+          </ul>
+        </div>
+        
+        <!-- 写作提示 -->
+        <div v-if="practice.question_content.hints?.length" class="section">
+          <h4>💡 写作提示</h4>
+          <ul class="list-items hints">
+            <li v-for="(h, i) in practice.question_content.hints" :key="i">{{ h }}</li>
+          </ul>
+        </div>
+        
+        <div v-if="practice.question_content.evaluationFocus" class="section">
+          <h4>🔍 评审重点</h4>
+          <div class="focus-tags">
+            <el-tag
+              v-for="f in practice.question_content.evaluationFocus"
+              :key="f"
+              size="small"
+              type="warning"
+            >
+              {{ f }}
+            </el-tag>
+          </div>
+        </div>
+      </div>
+    </el-drawer>
   </div>
 </template>
 
@@ -424,6 +551,8 @@ onUnmounted(() => {
   height: calc(100vh - 40px);
   margin: -20px;
   background: #fff;
+  /* 移动端安全区域适配 */
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .do-practice.fullscreen {
@@ -435,6 +564,7 @@ onUnmounted(() => {
   z-index: 1000;
   height: 100vh;
   margin: 0;
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .toolbar {
@@ -707,5 +837,240 @@ onUnmounted(() => {
 .dictionary-fab .el-button:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== 移动端适配 ===== */
+@media (max-width: 768px) {
+  .do-practice {
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px 12px;
+    align-items: stretch;
+  }
+  
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .toolbar-left .el-button .btn-text {
+    display: none;
+  }
+  
+  .toolbar-left .el-button {
+    padding: 8px;
+  }
+  
+  .practice-title {
+    flex: 1;
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .mobile-question-btn {
+    flex-shrink: 0;
+  }
+  
+  /* 字数单独一行，居中显示 */
+  .toolbar-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 4px 0;
+    border-top: 1px solid #ebeef5;
+    border-bottom: 1px solid #ebeef5;
+    margin: 4px 0;
+  }
+  
+  .word-count {
+    font-size: 16px;
+    font-weight: 600;
+  }
+  
+  .word-count .count {
+    font-size: 20px;
+  }
+  
+  .word-count .range {
+    font-size: 13px;
+  }
+  
+  .timer {
+    font-size: 14px;
+    padding: 2px 8px;
+    gap: 4px;
+  }
+  
+  /* 计时和按钮一行 */
+  .toolbar-right {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .toolbar-right .el-button {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+  
+  .toolbar-right .el-button .btn-text {
+    display: none;
+  }
+  
+  .toolbar-right .el-button .btn-text-short {
+    display: inline;
+  }
+  
+  .toolbar-right .el-button:first-child {
+    display: none; /* 隐藏全屏按钮 */
+  }
+  
+  .main-content {
+    flex-direction: column;
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .writing-panel {
+    flex: 1;
+    min-height: 0;
+  }
+  
+  .writing-input :deep(.el-textarea__inner) {
+    font-size: 15px;
+    line-height: 1.8;
+    padding: 12px;
+    min-height: calc(100vh - 320px) !important;
+  }
+  
+  .question-panel {
+    display: none; /* 移动端隐藏右侧题目面板，使用抽屉代替 */
+  }
+  
+  .status-bar {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+  
+  .status-bar .tips {
+    display: none; /* 移动端隐藏快捷键提示 */
+  }
+  
+  .dictionary-fab {
+    right: 16px;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+  
+  .dictionary-fab .el-button {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .dictionary-fab .el-button .el-icon {
+    font-size: 20px !important;
+  }
+  
+  /* 题目抽屉移动端样式 */
+  .question-drawer :deep(.el-drawer__body) {
+    padding: 12px 16px;
+    overflow-y: auto;
+  }
+  
+  .question-detail-drawer {
+    line-height: 1.6;
+  }
+  
+  .question-detail-drawer .info-tags {
+    margin-bottom: 12px;
+    display: flex;
+    gap: 8px;
+  }
+  
+  .question-detail-drawer .section {
+    margin-bottom: 14px;
+  }
+  
+  .question-detail-drawer .section h4 {
+    color: #303133;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  
+  .question-detail-drawer .section p {
+    color: #606266;
+    margin: 0;
+    font-size: 13px;
+  }
+  
+  .question-detail-drawer .characters {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .question-detail-drawer .character-card {
+    background: #f5f7fa;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid #e4e7ed;
+  }
+  
+  .question-detail-drawer .char-name {
+    font-weight: bold;
+    color: #303133;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  
+  .question-detail-drawer .char-info {
+    color: #606266;
+    font-size: 12px;
+    margin-bottom: 3px;
+    line-height: 1.5;
+  }
+  
+  .question-detail-drawer .list-items {
+    margin: 0;
+    padding-left: 18px;
+    color: #606266;
+    font-size: 13px;
+  }
+  
+  .question-detail-drawer .list-items li {
+    margin-bottom: 3px;
+    line-height: 1.5;
+  }
+  
+  .question-detail-drawer .list-items.hints {
+    color: #909399;
+    font-style: italic;
+  }
+  
+  .question-detail-drawer .focus-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+}
+
+/* 桌面端隐藏短文本 */
+.btn-text-short {
+  display: none;
 }
 </style>
