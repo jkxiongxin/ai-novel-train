@@ -172,13 +172,38 @@ router.post('/words/:id/use', (req, res) => {
 // AI 查询相关词汇
 router.post('/ai/search', async (req, res) => {
   try {
+    const db = getDatabase();
     const { query, context } = req.body;
     
     if (!query) {
       return res.status(400).json({ success: false, message: '请输入查询内容' });
     }
     
-    const prompt = `你是一个专业的中文写作助手，特别擅长帮助网络小说作者找到精准的词汇来描述动作、情感和场景。
+    // 获取 AI 词典查询的 Prompt 模板
+    let template = db.prepare(`
+      SELECT * FROM prompt_templates 
+      WHERE category = 'dictionary' AND type = 'search' AND is_active = 1
+      ORDER BY is_default DESC
+      LIMIT 1
+    `).get();
+    
+    let prompt;
+    if (template) {
+      // 使用数据库中的模板
+      prompt = template.content;
+      prompt = prompt.replace(/{{query}}/g, query);
+      prompt = prompt.replace(/{{context}}/g, context || '');
+      // 处理条件块
+      if (context) {
+        prompt = prompt.replace(/{{#context}}[\s\S]*?{{\/context}}/g, (match) => {
+          return match.replace(/{{#context}}/g, '').replace(/{{\/context}}/g, '');
+        });
+      } else {
+        prompt = prompt.replace(/{{#context}}[\s\S]*?{{\/context}}/g, '');
+      }
+    } else {
+      // 使用内置默认 Prompt
+      prompt = `你是一个专业的中文写作助手，特别擅长帮助网络小说作者找到精准的词汇来描述动作、情感和场景。
 
 用户想要查找能够表达"${query}"这个意思的词汇。
 ${context ? `写作上下文：${context}` : ''}
@@ -204,6 +229,7 @@ ${context ? `写作上下文：${context}` : ''}
 3. 优先推荐动词，其次是形容词
 4. 示例要简短且能体现词汇用法
 5. 只返回JSON，不要其他说明`;
+    }
 
     // 调用 AI 搜索词汇（功能锚点：dictionary_search）
     const result = await callAIForFeature(AI_FEATURES.DICTIONARY_SEARCH, [
@@ -243,13 +269,30 @@ ${context ? `写作上下文：${context}` : ''}
 // AI 生成专题词典
 router.post('/ai/generate', async (req, res) => {
   try {
+    const db = getDatabase();
     const { topic, count = 20 } = req.body;
     
     if (!topic) {
       return res.status(400).json({ success: false, message: '请输入词典主题' });
     }
     
-    const prompt = `你是一个专业的中文写作词典编纂专家，帮助网络小说作者建立专属词汇库。
+    // 获取 AI 词典生成的 Prompt 模板
+    let template = db.prepare(`
+      SELECT * FROM prompt_templates 
+      WHERE category = 'dictionary' AND type = 'generate' AND is_active = 1
+      ORDER BY is_default DESC
+      LIMIT 1
+    `).get();
+    
+    let prompt;
+    if (template) {
+      // 使用数据库中的模板
+      prompt = template.content;
+      prompt = prompt.replace(/{{topic}}/g, topic);
+      prompt = prompt.replace(/{{count}}/g, count.toString());
+    } else {
+      // 使用内置默认 Prompt
+      prompt = `你是一个专业的中文写作词典编纂专家，帮助网络小说作者建立专属词汇库。
 
 请为"${topic}"这个主题生成${count}个精选词汇，用于网络小说写作。
 
@@ -273,6 +316,7 @@ router.post('/ai/generate', async (req, res) => {
 3. 包含常用词和高级词汇
 4. 示例要简短且能体现词汇用法
 5. 只返回JSON`;
+    }
 
     // 调用 AI 生成词汇（功能锚点：dictionary_generate）
     const result = await callAIForFeature(AI_FEATURES.DICTIONARY_GENERATE, [

@@ -1,4 +1,7 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, createWebHashHistory } from 'vue-router'
+
+// 检测是否在 Electron 环境中运行
+const isElectron = typeof window !== 'undefined' && window.electronAPI
 
 const routes = [
   {
@@ -123,7 +126,8 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  // Electron 环境使用 hash 模式，Web 环境使用 history 模式
+  history: isElectron ? createWebHashHistory() : createWebHistory(),
   routes
 })
 

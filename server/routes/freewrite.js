@@ -258,7 +258,7 @@ router.post('/:id/ai-review', async (req, res) => {
       });
     }
     
-    // 获取通用评审 Prompt，如果没有则使用内置 Prompt
+    // 获取随心练习评审 Prompt 模板
     let template = db.prepare(`
       SELECT * FROM prompt_templates 
       WHERE category = 'evaluator' AND type = 'freewrite' AND is_active = 1
@@ -268,11 +268,12 @@ router.post('/:id/ai-review', async (req, res) => {
     
     let promptContent;
     if (template) {
+      // 使用数据库中的模板
       promptContent = template.content;
       promptContent = promptContent.replace(/{{userAnswer}}/g, practice.content);
       promptContent = promptContent.replace(/{{title}}/g, practice.title || '随心练习');
     } else {
-      // 使用内置的评审 Prompt - 严师风格
+      // 如果数据库中没有模板，使用内置的默认 Prompt
       promptContent = `你是一位严厉但负责任的写作导师，有着多年的文学创作和教学经验。你的职责是以高标准严格审视学生的作品，指出问题所在，并给出具体可执行的改进建议。
 
 ## 评审原则

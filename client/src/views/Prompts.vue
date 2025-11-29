@@ -17,7 +17,8 @@ const saving = ref(false)
 
 const categoryNames = {
   generator: '题目生成器',
-  evaluator: '评审模板'
+  evaluator: '评审模板',
+  dictionary: 'AI 词典'
 }
 
 const typeNames = {
@@ -29,7 +30,10 @@ const typeNames = {
   plot: '情节转折',
   chapter: '章节创作',
   comprehensive: '综合训练',
-  general: '通用评审'
+  general: '通用评审',
+  freewrite: '随心练习评审',
+  search: 'AI 查词',
+  generate: 'AI 生成词典'
 }
 
 async function loadPrompts() {
@@ -141,6 +145,7 @@ onMounted(() => {
     <el-tabs v-model="activeTab" @tab-change="handleTabChange">
       <el-tab-pane label="题目生成器" name="generator" />
       <el-tab-pane label="评审模板" name="evaluator" />
+      <el-tab-pane label="AI 词典" name="dictionary" />
     </el-tabs>
     
     <div class="prompts-list" v-loading="loading">

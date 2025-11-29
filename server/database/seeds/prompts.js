@@ -200,26 +200,34 @@ const defaultPrompts = [
 
 请生成训练题，输出 JSON 格式：
 {
-  "title": "题目标题",
+  "title": "题目标题（如：描写一个古老神秘的地下宫殿）",
   "type": "environment",
   "difficulty": "{{difficulty}}",
-  "location": "地点名称",
-  "locationType": "地点类型（城市/山林/海洋/宫殿等）",
-  "timeOfDay": "时间段",
-  "weather": "天气状况",
-  "season": "季节",
-  "atmosphere": "需要营造的氛围（紧张/神秘/温馨等）",
-  "plotContext": "这个环境描写服务的剧情背景",
-  "keyElements": ["必须包含的环境元素"],
+  "description": "题目描述和要求（100-200字，详细说明需要描写什么场景，达到什么效果）",
+  "location": "地点名称（具体名称，如：幽冥古殿、星落峡谷）",
+  "locationType": "地点类型（城市/山林/海洋/宫殿/洞穴/战场等）",
+  "timeOfDay": "时间段（黎明/清晨/正午/黄昏/夜晚/深夜等）",
+  "weather": "天气状况（晴朗/阴沉/雷雨/大雪/迷雾等）",
+  "season": "季节（春/夏/秋/冬或不限）",
+  "atmosphere": "需要营造的氛围（紧张/神秘/温馨/凄凉/壮观等）",
+  "plotContext": "这个环境描写服务的剧情背景（50-100字，说明主角为什么来到这里，即将发生什么）",
+  "keyElements": ["必须包含的环境元素1", "环境元素2", "环境元素3"],
   "sensoryRequirements": {
-    "visual": "视觉描写要求",
-    "auditory": "听觉描写要求",
-    "olfactory": "嗅觉描写要求",
-    "tactile": "触觉描写要求"
+    "visual": "视觉描写要求（如：需要描写光影变化、色彩对比）",
+    "auditory": "听觉描写要求（如：需要描写风声、水流声）",
+    "olfactory": "嗅觉描写要求（如：需要描写花香、腐朽气息）",
+    "tactile": "触觉描写要求（如：需要描写寒冷、潮湿感）"
   },
-  "wordCountRange": {"min": 数字, "max": 数字},
-  "evaluationFocus": ["评审重点"]
+  "wordCountRange": {"min": 300, "max": 500},
+  "evaluationFocus": ["评审重点1：如氛围营造", "评审重点2：如感官调动", "评审重点3：如细节描写"]
 }
+
+注意：
+1. title 必须是具体的题目标题，明确说明要描写什么
+2. description 必须详细说明题目要求和预期效果
+3. 所有字段都必须填写具体内容，不能留空
+4. keyElements 至少包含3个具体的环境元素
+5. sensoryRequirements 每个感官都要有具体的描写要求
 
 只输出JSON，不要有其他内容。`,
     variables: JSON.stringify(['difficulty', 'keywords', 'userIdea']),
@@ -242,27 +250,37 @@ const defaultPrompts = [
 
 请生成训练题，输出 JSON 格式：
 {
-  "title": "题目标题",
+  "title": "题目标题（如：从绝境到逆袭的转折）",
   "type": "plot",
   "difficulty": "{{difficulty}}",
-  "genre": "小说类型",
-  "initialSituation": "初始情况描述",
-  "expectedDirection": "读者预期的发展方向",
-  "actualTwist": "需要写的转折点",
-  "twistType": "转折类型（反转/揭秘/突变/逆袭等）",
+  "description": "题目描述和要求（100-200字，详细说明需要写出什么样的转折效果）",
+  "genre": "小说类型（玄幻/都市/仙侠/科幻等）",
+  "initialSituation": "初始情况描述（100-150字，详细描述转折前的局面，让读者能理解当前处境）",
+  "expectedDirection": "读者预期的发展方向（一句话说明读者以为会怎样发展）",
+  "actualTwist": "需要写的转折点（详细说明实际发生了什么出乎意料的转变）",
+  "twistType": "转折类型（反转/揭秘/突变/逆袭/反杀/身份揭露等）",
   "characters": [
     {
-      "name": "角色名",
-      "role": "在转折中的作用",
-      "beforeTwist": "转折前的状态",
-      "afterTwist": "转折后的状态"
+      "name": "角色名（必须是具体的名字）",
+      "identity": "身份背景（详细说明，如：落魄的天才少年、隐藏实力的老者）",
+      "personality": "性格特点（3-5个关键词，如：隐忍、果断、城府深）",
+      "role": "在转折中的作用（如：逆袭者、被打脸者、见证者）",
+      "beforeTwist": "转折前的状态（详细描述，如：被人嘲笑看不起）",
+      "afterTwist": "转折后的状态（详细描述，如：让所有人目瞪口呆）"
     }
   ],
-  "foreshadowing": ["可以铺垫的伏笔提示"],
-  "requirements": ["写作要求"],
-  "wordCountRange": {"min": 数字, "max": 数字},
-  "evaluationFocus": ["评审重点"]
+  "foreshadowing": ["可以铺垫的伏笔提示1", "伏笔提示2"],
+  "requirements": ["写作要求1：如转折要自然合理", "写作要求2：如情绪对比要强烈"],
+  "wordCountRange": {"min": 500, "max": 800},
+  "evaluationFocus": ["评审重点1：如转折的意外性", "评审重点2：如伏笔的埋设", "评审重点3：如节奏把控"]
 }
+
+注意：
+1. title 必须是具体的题目标题
+2. description 必须详细说明题目要求
+3. characters 中每个角色的所有属性（name、identity、personality、role、beforeTwist、afterTwist）都必须填写具体内容，绝不能留空
+4. initialSituation 必须足够详细，让用户理解背景
+5. 至少包含2个角色，主要角色的信息要完整
 
 只输出JSON，不要有其他内容。`,
     variables: JSON.stringify(['difficulty', 'keywords', 'userIdea']),
@@ -290,36 +308,44 @@ const defaultPrompts = [
 
 请生成详细的章节细纲，输出 JSON 格式：
 {
-  "title": "章节训练题",
+  "title": "章节创作训练题",
   "type": "chapter",
   "difficulty": "困难",
-  "chapterTitle": "章节标题",
-  "synopsis": "本章概要（150字以内）",
-  "openingHook": "开篇钩子建议",
+  "description": "题目描述（150-200字，详细说明本章需要完成的创作任务和预期效果）",
+  "chapterTitle": "章节标题（吸引人的章节名）",
+  "synopsis": "本章概要（150字以内，概括本章的主要内容和看点）",
+  "openingHook": "开篇钩子建议（如何吸引读者继续阅读）",
   "scenes": [
     {
       "sceneNumber": 1,
-      "sceneName": "场景名称",
-      "location": "地点",
-      "time": "时间",
-      "characters": ["出场角色"],
-      "content": "场景内容详细描述",
-      "purpose": "这个场景的叙事目的",
-      "emotionalArc": "情绪变化曲线",
-      "keyActions": ["关键动作/事件"],
-      "dialogueNotes": "对话要点提示",
-      "wordCountSuggestion": 建议字数
+      "sceneName": "场景名称（如：酒楼对峙）",
+      "location": "地点（具体描述）",
+      "time": "时间（如：黄昏时分）",
+      "characters": ["出场角色1", "出场角色2"],
+      "content": "场景内容详细描述（100-150字，说明这个场景发生什么）",
+      "purpose": "这个场景的叙事目的（如：展现主角实力、埋下伏笔）",
+      "emotionalArc": "情绪变化曲线（如：从紧张到释然）",
+      "keyActions": ["关键动作/事件1", "关键动作/事件2"],
+      "dialogueNotes": "对话要点提示（如：要展现角色的傲气）",
+      "wordCountSuggestion": 800
     }
   ],
   "plotPoints": [
-    {"point": "剧情点", "importance": "主线/支线/伏笔"}
+    {"point": "剧情点描述", "importance": "主线/支线/伏笔"}
   ],
-  "foreshadowing": ["可以埋设的伏笔"],
-  "chapterEndHook": "章节结尾悬念",
-  "writingNotes": ["写作注意事项"],
-  "wordCountRange": {"min": 数字, "max": 数字},
-  "evaluationFocus": ["评审重点"]
+  "foreshadowing": ["可以埋设的伏笔1", "伏笔2"],
+  "chapterEndHook": "章节结尾悬念（如何让读者想看下一章）",
+  "writingNotes": ["写作注意事项1", "注意事项2"],
+  "wordCountRange": {"min": 3000, "max": 5000},
+  "evaluationFocus": ["评审重点1：如情节完整性", "评审重点2：如节奏控制", "评审重点3：如人物塑造"]
 }
+
+注意：
+1. title 和 description 必须明确说明创作任务
+2. scenes 至少包含3个场景，每个场景的所有字段都必须填写
+3. 每个场景的 content 要足够详细，让用户知道要写什么
+4. plotPoints 至少包含3个剧情点
+5. 所有字段都不能为空
 
 只输出JSON，不要有其他内容。`,
     variables: JSON.stringify(['genre', 'protagonist', 'currentPlot', 'chapterGoal', 'targetWordCount', 'keywords', 'userIdea']),
@@ -640,38 +666,191 @@ const defaultPrompts = [
 只输出JSON，不要有其他内容。`,
     variables: JSON.stringify(['questionContent', 'userAnswer']),
     is_default: 1
+  },
+
+  // ========== 随心练习评审 Prompt ==========
+  {
+    category: 'evaluator',
+    type: 'freewrite',
+    name: '随心练习评审',
+    description: '专门针对随心练习的评审 Prompt，以严师风格给出客观评价',
+    content: `你是一位严厉但负责任的写作导师，有着多年的文学创作和教学经验。你的职责是以高标准严格审视学生的作品，指出问题所在，并给出具体可执行的改进建议。
+
+## 评审原则
+1. **不要一味夸奖**：空洞的赞美对学生没有帮助，要指出真正的问题
+2. **严格但公正**：打分要客观，不要因为鼓励而虚高分数
+3. **建议要具体**：不说"写得不够好"，而要说"第二段的情感转折过于突兀，建议在此处增加心理活动的铺垫"
+4. **以身作则**：如有必要，可以示范如何改写某个段落
+5. **着眼成长**：批评是为了帮助学生进步，要让学生知道如何改进
+
+## 待评审作品
+
+**标题**：{{title}}
+
+**内容**：
+{{userAnswer}}
+
+## 评审维度（请严格按照标准评分，70分以上应该是真正优秀的作品）
+
+1. **表达流畅度** (0-100分)
+   - 语句是否通顺自然？
+   - 有无病句、歧义、重复啰嗦？
+   - 段落衔接是否流畅？
+
+2. **创意想象力** (0-100分)
+   - 是否有独特的视角或切入点？
+   - 是否落入俗套？有无新意？
+   - 想象是否合理且有感染力？
+
+3. **情感真实度** (0-100分)
+   - 情感表达是否真挚自然？
+   - 有无"为赋新词强说愁"的矫揉造作？
+   - 能否引起读者共鸣？
+
+4. **文字功底** (0-100分)
+   - 用词是否准确、恰当？
+   - 是否有文采，有令人印象深刻的表达？
+   - 修辞运用是否得当？
+
+## 输出格式
+
+请以 JSON 格式返回评审结果：
+{
+  "totalScore": 65,
+  "dimensions": [
+    {"name": "表达流畅度", "score": 70, "comment": "具体指出流畅度方面的问题和优点"},
+    {"name": "创意想象力", "score": 60, "comment": "具体指出创意方面的问题和优点"},
+    {"name": "情感真实度", "score": 65, "comment": "具体指出情感方面的问题和优点"},
+    {"name": "文字功底", "score": 65, "comment": "具体指出文字方面的问题和优点"}
+  ],
+  "highlights": ["值得肯定的1-2个亮点，要具体"],
+  "improvements": [
+    "具体问题1：说明问题在哪里，为什么是问题，如何改进",
+    "具体问题2：...",
+    "具体问题3：..."
+  ],
+  "overallComment": "整体评价，直言不讳地指出主要问题，同时指明努力方向",
+  "teacherAdvice": "作为导师给出的具体练习建议或下一步行动指南"
+}
+
+只输出JSON，不要有其他内容。`,
+    variables: JSON.stringify(['title', 'userAnswer']),
+    is_default: 1
+  },
+
+  // ========== AI 词典相关 Prompt ==========
+  {
+    category: 'dictionary',
+    type: 'search',
+    name: 'AI 词典查询',
+    description: '根据用户输入查询相关的精准写作词汇',
+    content: `你是一个专业的中文写作助手，特别擅长帮助网络小说作者找到精准的词汇来描述动作、情感和场景。
+
+用户想要查找能够表达"{{query}}"这个意思的词汇。
+{{#context}}
+写作上下文：{{context}}
+{{/context}}
+
+请提供10-15个相关的精准词汇，按照以下JSON格式返回：
+{
+  "words": [
+    {
+      "word": "词汇",
+      "meaning": "词义解释",
+      "category": "分类（如：动作、情感、表情、神态、语气等）",
+      "examples": "使用示例（一个简短的句子）",
+      "intensity": "程度（轻/中/重）",
+      "formality": "语体（口语/书面/中性）"
+    }
+  ],
+  "tips": "选词建议（一句话）"
+}
+
+要求：
+1. 词汇要精准、生动，适合网络小说写作
+2. 包含不同程度和语境的词汇供选择
+3. 优先推荐动词，其次是形容词
+4. 示例要简短且能体现词汇用法
+5. 只返回JSON，不要其他说明`,
+    variables: JSON.stringify(['query', 'context']),
+    is_default: 1
+  },
+  {
+    category: 'dictionary',
+    type: 'generate',
+    name: 'AI 词典生成',
+    description: '根据主题生成专题词典',
+    content: `你是一个专业的中文写作词典编纂专家，帮助网络小说作者建立专属词汇库。
+
+请为"{{topic}}"这个主题生成{{count}}个精选词汇，用于网络小说写作。
+
+按照以下JSON格式返回：
+{
+  "topic": "{{topic}}",
+  "words": [
+    {
+      "word": "词汇",
+      "meaning": "词义解释",
+      "category": "{{topic}}",
+      "examples": "使用示例",
+      "tags": ["标签1", "标签2"]
+    }
+  ]
+}
+
+要求：
+1. 词汇要精准、生动、有画面感
+2. 覆盖不同程度和场景
+3. 包含常用词和高级词汇
+4. 示例要简短且能体现词汇用法
+5. 只返回JSON`,
+    variables: JSON.stringify(['topic', 'count']),
+    is_default: 1
   }
 ];
 
 async function seedDefaultPrompts(db) {
   const count = db.prepare('SELECT COUNT(*) as count FROM prompt_templates WHERE is_default = 1').get();
   
-  if (count.count > 0) {
-    console.log('默认 Prompt 模板已存在，跳过初始化');
-    return;
-  }
-
+  // 检查并插入缺失的默认模板
   const insert = db.prepare(`
     INSERT INTO prompt_templates (category, type, name, description, content, variables, is_default, is_active)
     VALUES (?, ?, ?, ?, ?, ?, ?, 1)
   `);
-
-  const insertMany = db.transaction((prompts) => {
+  
+  const checkExists = db.prepare(`
+    SELECT id FROM prompt_templates WHERE category = ? AND type = ? AND is_default = 1
+  `);
+  
+  let insertedCount = 0;
+  
+  const insertMissing = db.transaction((prompts) => {
     for (const prompt of prompts) {
-      insert.run(
-        prompt.category,
-        prompt.type,
-        prompt.name,
-        prompt.description,
-        prompt.content,
-        prompt.variables,
-        prompt.is_default
-      );
+      const exists = checkExists.get(prompt.category, prompt.type);
+      if (!exists) {
+        insert.run(
+          prompt.category,
+          prompt.type,
+          prompt.name,
+          prompt.description,
+          prompt.content,
+          prompt.variables,
+          prompt.is_default
+        );
+        insertedCount++;
+      }
     }
   });
 
-  insertMany(defaultPrompts);
-  console.log(`已插入 ${defaultPrompts.length} 个默认 Prompt 模板`);
+  insertMissing(defaultPrompts);
+  
+  if (insertedCount > 0) {
+    console.log(`已插入 ${insertedCount} 个新的默认 Prompt 模板`);
+  } else if (count.count === 0) {
+    console.log('数据库中没有默认模板，已全部初始化');
+  } else {
+    console.log('默认 Prompt 模板已是最新');
+  }
 }
 
 module.exports = {

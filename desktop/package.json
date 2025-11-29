@@ -1,6 +1,6 @@
 {
   "name": "ai-novel-trainer-desktop",
-  "version": "1.0.0-alpha",
+  "version": "1.0.1-alpha",
   "description": "AI 网文写作训练系统 - 桌面版",
   "main": "main.js",
   "author": "AI Novel Trainer Team",

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import MobileNav from './components/MobileNav.vue'
 import {
@@ -18,6 +18,15 @@ import {
 
 const route = useRoute()
 const isCollapse = ref(false)
+
+// 检测是否在 Electron 环境中运行
+const isElectron = ref(false)
+const isMacOS = ref(false)
+
+onMounted(() => {
+  isElectron.value = !!(window.electronAPI)
+  isMacOS.value = window.electronAPI?.platform === 'darwin'
+})
 
 // 需要隐藏底部导航的页面（沉浸式页面）
 const hideNavRoutes = ['/practice/', '/freewrite/do', '/typing/']
@@ -53,8 +62,14 @@ const activeMenu = computed(() => {
 </script>
 
 <template>
+  <!-- Electron 桌面端顶部拖动栏 -->
+  <div v-if="isElectron" class="electron-titlebar" :class="{ 'is-macos': isMacOS }">
+    <div class="titlebar-drag-region"></div>
+    <span class="titlebar-title">AI 网文训练师</span>
+  </div>
+  
   <!-- 桌面端布局 - 通过 CSS 媒体查询控制显示 -->
-  <el-container class="app-container desktop-only">
+  <el-container class="app-container desktop-only" :class="{ 'has-titlebar': isElectron }">
     <!-- 侧边栏 -->
     <el-aside :width="isCollapse ? '64px' : '200px'" class="app-aside">
       <div class="logo">
@@ -116,6 +131,59 @@ const activeMenu = computed(() => {
 html, body, #app {
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* ===== Electron 顶部拖动栏样式 ===== */
+.electron-titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 38px;
+  background: linear-gradient(to bottom, #3a4a5e 0%, #304156 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  user-select: none;
+}
+
+.electron-titlebar.is-macos {
+  /* macOS 上为红绿灯按钮留出空间 */
+  padding-left: 80px;
+}
+
+.titlebar-drag-region {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.titlebar-title {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+/* 有标题栏时的容器调整 */
+.app-container.has-titlebar {
+  padding-top: 38px;
+  height: calc(100vh);
+}
+
+.app-container.has-titlebar .app-aside {
+  padding-top: 0;
+  height: calc(100vh - 38px);
+}
+
+.app-container.has-titlebar .app-main {
+  height: calc(100vh - 38px);
 }
 
 /* ===== 响应式显示控制 ===== */
