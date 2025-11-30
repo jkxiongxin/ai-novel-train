@@ -122,6 +122,64 @@ const routes = [
     name: 'FreewriteDetail',
     component: () => import('../views/Freewrite/Detail.vue'),
     meta: { title: '练习详情' }
+  },
+  // 趣味练习路由
+  {
+    path: '/word-practice',
+    name: 'WordPractice',
+    component: () => import('../views/WordPractice/Index.vue'),
+    meta: { title: '趣味练习' }
+  },
+  {
+    path: '/word-practice/new',
+    name: 'WordPracticeNew',
+    component: () => import('../views/WordPractice/New.vue'),
+    meta: { title: '开始练习' }
+  },
+  // 兼容旧路径
+  {
+    path: '/word-practice/do/:id',
+    redirect: to => `/word-practice/session/${to.params.id}`
+  },
+  {
+    path: '/word-practice/result/:id',
+    redirect: to => `/word-practice/session/${to.params.id}/result`
+  },
+  {
+    path: '/word-practice/session/:id',
+    name: 'WordPracticeSession',
+    component: () => import('../views/WordPractice/Do.vue'),
+    meta: { title: '练习中' }
+  },
+  {
+    path: '/word-practice/session/:id/result',
+    name: 'WordPracticeResult',
+    component: () => import('../views/WordPractice/Result.vue'),
+    meta: { title: '练习结果' }
+  },
+  {
+    path: '/word-practice/history',
+    name: 'WordPracticeHistory',
+    component: () => import('../views/WordPractice/History.vue'),
+    meta: { title: '练习记录' }
+  },
+  {
+    path: '/word-practice/mistakes',
+    name: 'WordPracticeMistakes',
+    component: () => import('../views/WordPractice/Mistakes.vue'),
+    meta: { title: '错题集' }
+  },
+  {
+    path: '/word-practice/reviews',
+    name: 'WordPracticeReviews',
+    component: () => import('../views/WordPractice/Reviews.vue'),
+    meta: { title: '复习计划' }
+  },
+  {
+    path: '/word-practice/review',
+    name: 'WordPracticeReview',
+    component: () => import('../views/WordPractice/Review.vue'),
+    meta: { title: '复习模式' }
   }
 ]
 

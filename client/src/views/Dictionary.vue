@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
+import { Plus, VideoPlay } from '@element-plus/icons-vue'
 import {
   getWords,
   addWord,
@@ -218,6 +218,12 @@ onMounted(() => {
     <div class="page-header">
       <h1>AI 词典</h1>
       <div class="header-actions">
+        <router-link to="/word-practice">
+          <el-button type="success">
+            <el-icon><VideoPlay /></el-icon>
+            趣味练习
+          </el-button>
+        </router-link>
         <el-button type="primary" @click="openGenerateDialog">
           <el-icon><MagicStick /></el-icon>
           AI 生成词典
@@ -397,7 +403,7 @@ onMounted(() => {
           />
         </el-form-item>
         <el-form-item label="词汇数量">
-          <el-slider v-model="generateForm.count" :min="10" :max="50" show-input />
+          <el-slider v-model="generateForm.count" :min="2" :max="50" show-input />
         </el-form-item>
         <el-form-item>
           <el-button 

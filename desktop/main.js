@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, dialog, Menu } = require('electron');
+const { app, BrowserWindow, shell, dialog, Menu, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 
@@ -79,7 +79,11 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    titleBarStyle: 'hiddenInset', // macOS 样式
+    // macOS 使用隐藏式标题栏，Windows 使用无边框
+    ...(process.platform === 'darwin' 
+      ? { titleBarStyle: 'hiddenInset' } 
+      : { frame: false, titleBarStyle: 'hidden' }
+    ),
     show: false, // 先隐藏，等加载完成后显示
     backgroundColor: '#f5f7fa'
   });
@@ -109,6 +113,39 @@ function createWindow() {
   // 窗口关闭时清理
   mainWindow.on('closed', () => {
     mainWindow = null;
+  });
+
+  // Windows: 监听最大化状态变化，通知渲染进程
+  if (process.platform !== 'darwin') {
+    mainWindow.on('maximize', () => {
+      mainWindow?.webContents.send('window-maximize-change', true);
+    });
+    mainWindow.on('unmaximize', () => {
+      mainWindow?.webContents.send('window-maximize-change', false);
+    });
+  }
+}
+
+// 设置窗口控制 IPC 处理程序 (Windows)
+function setupWindowControlHandlers() {
+  ipcMain.handle('window-minimize', () => {
+    mainWindow?.minimize();
+  });
+
+  ipcMain.handle('window-maximize', () => {
+    if (mainWindow?.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow?.maximize();
+    }
+  });
+
+  ipcMain.handle('window-close', () => {
+    mainWindow?.close();
+  });
+
+  ipcMain.handle('window-is-maximized', () => {
+    return mainWindow?.isMaximized() ?? false;
   });
 }
 
@@ -196,6 +233,11 @@ app.whenReady().then(async () => {
   try {
     // 创建菜单
     createMenu();
+
+    // 设置窗口控制 IPC 处理程序 (Windows)
+    if (process.platform !== 'darwin') {
+      setupWindowControlHandlers();
+    }
 
     // 启动服务器（仅生产环境）
     if (!isDev) {

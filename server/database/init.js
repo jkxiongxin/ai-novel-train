@@ -2,6 +2,7 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const fs = require('fs');
 const { seedDefaultPrompts } = require('./seeds/prompts');
+const { runMigrations, getMigrationStatus } = require('./migrations');
 
 // 支持通过环境变量自定义数据库路径（用于 Electron 桌面版）
 const getDbPath = () => {
@@ -69,7 +70,8 @@ async function initDatabase() {
     { key: 'prompt_test', name: 'Prompt 测试', description: '测试 Prompt 模板效果' },
     { key: 'dictionary_search', name: '词典查词', description: 'AI 搜索相关词汇' },
     { key: 'dictionary_generate', name: '词典生成', description: 'AI 生成专题词典' },
-    { key: 'chapter_analyze', name: '章节分析', description: 'AI 分析章节内容，拆分片段并识别文风' }
+    { key: 'chapter_analyze', name: '章节分析', description: 'AI 分析章节内容，拆分片段并识别文风' },
+    { key: 'word_practice_grade', name: '趣味练习评分', description: 'AI 评分造句题答案并提供反馈' }
   ];
 
   const insertFeature = db.prepare(`
@@ -331,6 +333,158 @@ async function initDatabase() {
     CREATE INDEX IF NOT EXISTS idx_freewrite_review_practice ON freewrite_reviews(practice_id);
   `);
 
+  // 创建趣味练习会话表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS word_practice_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT DEFAULT '词汇练习',
+      categories TEXT NOT NULL,
+      word_count INTEGER NOT NULL,
+      display_time INTEGER DEFAULT 10,
+      total_words TEXT,
+      current_phase TEXT DEFAULT 'memorize',
+      current_word_index INTEGER DEFAULT 0,
+      total_questions INTEGER DEFAULT 0,
+      correct_count INTEGER DEFAULT 0,
+      wrong_count INTEGER DEFAULT 0,
+      total_score REAL DEFAULT 0,
+      time_spent INTEGER DEFAULT 0,
+      status TEXT DEFAULT 'preparing',
+      start_time DATETIME,
+      end_time DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 创建练习题目表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS word_practice_questions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL,
+      word_id INTEGER NOT NULL,
+      question_type TEXT NOT NULL,
+      difficulty INTEGER DEFAULT 1,
+      question_content TEXT NOT NULL,
+      options TEXT,
+      correct_answer TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (session_id) REFERENCES word_practice_sessions(id) ON DELETE CASCADE,
+      FOREIGN KEY (word_id) REFERENCES dictionary_words(id)
+    )
+  `);
+
+  // 创建答题记录表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS word_practice_answers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL,
+      question_id INTEGER NOT NULL,
+      user_answer TEXT,
+      is_correct BOOLEAN DEFAULT 0,
+      score REAL DEFAULT 0,
+      time_spent INTEGER DEFAULT 0,
+      ai_feedback TEXT,
+      submitted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (session_id) REFERENCES word_practice_sessions(id) ON DELETE CASCADE,
+      FOREIGN KEY (question_id) REFERENCES word_practice_questions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // 创建练习结果表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS word_practice_results (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      session_id INTEGER NOT NULL UNIQUE,
+      total_questions INTEGER DEFAULT 0,
+      correct_count INTEGER DEFAULT 0,
+      wrong_count INTEGER DEFAULT 0,
+      choice_correct INTEGER DEFAULT 0,
+      choice_total INTEGER DEFAULT 0,
+      fill_correct INTEGER DEFAULT 0,
+      fill_total INTEGER DEFAULT 0,
+      sentence_correct INTEGER DEFAULT 0,
+      sentence_total INTEGER DEFAULT 0,
+      avg_score REAL DEFAULT 0,
+      time_spent INTEGER DEFAULT 0,
+      ai_summary TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (session_id) REFERENCES word_practice_sessions(id) ON DELETE CASCADE
+    )
+  `);
+
+  // 创建错题集表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS word_mistakes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      word_id INTEGER NOT NULL,
+      word TEXT NOT NULL,
+      meaning TEXT,
+      session_id INTEGER,
+      question_type TEXT,
+      user_answer TEXT,
+      correct_answer TEXT,
+      mistake_count INTEGER DEFAULT 1,
+      review_count INTEGER DEFAULT 0,
+      is_mastered BOOLEAN DEFAULT 0,
+      last_mistake_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_review_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (word_id) REFERENCES dictionary_words(id),
+      FOREIGN KEY (session_id) REFERENCES word_practice_sessions(id) ON DELETE SET NULL
+    )
+  `);
+
+  // 创建复习计划表（基于艾宾浩斯遗忘曲线）
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS word_review_plans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      word_id INTEGER NOT NULL,
+      word TEXT NOT NULL,
+      meaning TEXT,
+      category TEXT,
+      examples TEXT,
+      source_type TEXT DEFAULT 'practice',
+      source_id INTEGER,
+      review_stage INTEGER DEFAULT 1,
+      next_review_at DATETIME NOT NULL,
+      last_reviewed_at DATETIME,
+      correct_streak INTEGER DEFAULT 0,
+      total_reviews INTEGER DEFAULT 0,
+      is_completed BOOLEAN DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (word_id) REFERENCES dictionary_words(id)
+    )
+  `);
+
+  // 创建通知表
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      type TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT,
+      related_type TEXT,
+      related_id INTEGER,
+      is_read BOOLEAN DEFAULT 0,
+      scheduled_at DATETIME,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // 创建趣味练习相关索引
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_practice_session_status ON word_practice_sessions(status);
+    CREATE INDEX IF NOT EXISTS idx_practice_question_session ON word_practice_questions(session_id);
+    CREATE INDEX IF NOT EXISTS idx_practice_answer_session ON word_practice_answers(session_id);
+    CREATE INDEX IF NOT EXISTS idx_mistakes_word ON word_mistakes(word_id);
+    CREATE INDEX IF NOT EXISTS idx_mistakes_mastered ON word_mistakes(is_mastered);
+    CREATE INDEX IF NOT EXISTS idx_review_next ON word_review_plans(next_review_at);
+    CREATE INDEX IF NOT EXISTS idx_review_completed ON word_review_plans(is_completed);
+    CREATE INDEX IF NOT EXISTS idx_notification_read ON notifications(is_read);
+    CREATE INDEX IF NOT EXISTS idx_notification_type ON notifications(type);
+  `);
+
   // 创建章节片段索引
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_segment_chapter ON chapter_segments(chapter_id);
@@ -357,11 +511,23 @@ async function initDatabase() {
   // 插入默认 Prompt 模板
   await seedDefaultPrompts(db);
 
+  // 运行数据库迁移（处理增量更新）
+  const migrationResult = runMigrations(db);
+  if (!migrationResult.success) {
+    console.error('数据库迁移失败:', migrationResult.error);
+    throw new Error('数据库迁移失败: ' + migrationResult.error);
+  }
+  
+  if (migrationResult.migrationsApplied > 0) {
+    console.log(`成功应用 ${migrationResult.migrationsApplied} 个迁移，数据库版本: ${migrationResult.fromVersion} -> ${migrationResult.toVersion}`);
+  }
+
   console.log('数据库初始化完成');
   return db;
 }
 
 module.exports = {
   getDatabase,
-  initDatabase
+  initDatabase,
+  getMigrationStatus
 };

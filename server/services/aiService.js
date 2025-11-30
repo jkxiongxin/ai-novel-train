@@ -10,7 +10,8 @@ const AI_FEATURES = {
   PROMPT_TEST: 'prompt_test',                // Prompt 测试
   DICTIONARY_SEARCH: 'dictionary_search',    // 词典查词
   DICTIONARY_GENERATE: 'dictionary_generate', // 词典生成
-  CHAPTER_ANALYZE: 'chapter_analyze'         // 章节分析
+  CHAPTER_ANALYZE: 'chapter_analyze',        // 章节分析
+  WORD_PRACTICE_GRADE: 'word_practice_grade' // 趣味练习评分
 };
 
 // 解密 API Key
@@ -216,7 +217,7 @@ async function getModelList(options) {
     });
 
     if (!response.ok) {
-      throw new Error('获取模型列表失败');
+      throw new Error(`获取模型列表失败，请求地址为${url}`);
     }
 
     const data = await response.json();

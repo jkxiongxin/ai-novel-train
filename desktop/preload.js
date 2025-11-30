@@ -47,6 +47,30 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 移除更新状态监听
   removeUpdateStatusListener: () => {
     ipcRenderer.removeAllListeners('update-status');
+  },
+
+  // ========== 窗口控制 API (Windows) ==========
+  
+  // 最小化窗口
+  minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
+  
+  // 最大化/还原窗口
+  maximizeWindow: () => ipcRenderer.invoke('window-maximize'),
+  
+  // 关闭窗口
+  closeWindow: () => ipcRenderer.invoke('window-close'),
+  
+  // 获取窗口是否最大化
+  isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+  
+  // 监听窗口最大化状态变化
+  onMaximizeChange: (callback) => {
+    ipcRenderer.on('window-maximize-change', (event, isMaximized) => callback(isMaximized));
+  },
+  
+  // 移除最大化状态监听
+  removeMaximizeChangeListener: () => {
+    ipcRenderer.removeAllListeners('window-maximize-change');
   }
 });
 

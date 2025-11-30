@@ -400,7 +400,7 @@ watch(selectedCategory, () => {
               />
             </el-form-item>
             <el-form-item label="词汇数量">
-              <el-slider v-model="generateCount" :min="10" :max="50" show-input />
+              <el-slider v-model="generateCount" :min="2" :max="50" show-input />
             </el-form-item>
             <el-form-item>
               <el-button 

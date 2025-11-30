@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getDatabase } = require('../database/init');
+const { getDatabase, getMigrationStatus } = require('../database/init');
 const fs = require('fs');
 const path = require('path');
 
@@ -226,6 +226,25 @@ router.post('/data/reset', (req, res) => {
     res.status(500).json({
       success: false,
       message: '重置失败',
+      error: error.message
+    });
+  }
+});
+
+// 获取数据库迁移状态
+router.get('/database/status', (req, res) => {
+  try {
+    const db = getDatabase();
+    const status = getMigrationStatus(db);
+    
+    res.json({
+      success: true,
+      data: status
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '获取数据库状态失败',
       error: error.message
     });
   }

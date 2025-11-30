@@ -22,11 +22,25 @@ const isCollapse = ref(false)
 // 检测是否在 Electron 环境中运行
 const isElectron = ref(false)
 const isMacOS = ref(false)
+const isWindowMaximized = ref(false)
 
-onMounted(() => {
+onMounted(async () => {
   isElectron.value = !!(window.electronAPI)
   isMacOS.value = window.electronAPI?.platform === 'darwin'
+  
+  // Windows: 获取初始最大化状态并监听变化
+  if (isElectron.value && !isMacOS.value) {
+    isWindowMaximized.value = await window.electronAPI?.isMaximized?.() || false
+    window.electronAPI?.onMaximizeChange?.((maximized) => {
+      isWindowMaximized.value = maximized
+    })
+  }
 })
+
+// Windows 窗口控制
+const minimizeWindow = () => window.electronAPI?.minimizeWindow?.()
+const maximizeWindow = () => window.electronAPI?.maximizeWindow?.()
+const closeWindow = () => window.electronAPI?.closeWindow?.()
 
 // 需要隐藏底部导航的页面（沉浸式页面）
 const hideNavRoutes = ['/practice/', '/freewrite/do', '/typing/']
@@ -62,17 +76,19 @@ const activeMenu = computed(() => {
 </script>
 
 <template>
-  <!-- Electron 桌面端顶部拖动栏 -->
-  <div v-if="isElectron" class="electron-titlebar" :class="{ 'is-macos': isMacOS }">
+  <!-- Electron 桌面端顶部拖动栏 - 仅 macOS 显示 -->
+  <div v-if="isElectron && isMacOS" class="electron-titlebar is-macos">
     <div class="titlebar-drag-region"></div>
     <span class="titlebar-title">AI 网文训练师</span>
   </div>
   
   <!-- 桌面端布局 - 通过 CSS 媒体查询控制显示 -->
-  <el-container class="app-container desktop-only" :class="{ 'has-titlebar': isElectron }">
+  <el-container class="app-container desktop-only" :class="{ 'has-titlebar': isElectron && isMacOS }">
     <!-- 侧边栏 -->
     <el-aside :width="isCollapse ? '64px' : '200px'" class="app-aside">
-      <div class="logo">
+      <!-- Windows 拖动区域 -->
+      <div v-if="isElectron && !isMacOS" class="windows-drag-region"></div>
+      <div class="logo" :class="{ 'windows-draggable': isElectron && !isMacOS }">
         <span v-if="!isCollapse">📚 小说写作训练</span>
         <span v-else>📚</span>
       </div>
@@ -100,6 +116,28 @@ const activeMenu = computed(() => {
     
     <!-- 主内容区 -->
     <el-main class="app-main">
+      <!-- Windows 窗口控制按钮 -->
+      <div v-if="isElectron && !isMacOS" class="windows-controls">
+        <div class="windows-drag-area"></div>
+        <button class="win-btn" @click="minimizeWindow" title="最小化">
+          <svg width="10" height="10" viewBox="0 0 10 10">
+            <path d="M0 5h10v1H0z" fill="currentColor"/>
+          </svg>
+        </button>
+        <button class="win-btn" @click="maximizeWindow" title="最大化">
+          <svg v-if="!isWindowMaximized" width="10" height="10" viewBox="0 0 10 10">
+            <path d="M0 0v10h10V0H0zm1 1h8v8H1V1z" fill="currentColor"/>
+          </svg>
+          <svg v-else width="10" height="10" viewBox="0 0 10 10">
+            <path d="M2 0v2H0v8h8V8h2V0H2zm6 8H1V3h7v5zm1-6H3V1h6v1z" fill="currentColor"/>
+          </svg>
+        </button>
+        <button class="win-btn win-close" @click="closeWindow" title="关闭">
+          <svg width="10" height="10" viewBox="0 0 10 10">
+            <path d="M1 0L0 1l4 4-4 4 1 1 4-4 4 4 1-1-4-4 4-4-1-1-4 4-4-4z" fill="currentColor"/>
+          </svg>
+        </button>
+      </div>
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
@@ -171,6 +209,65 @@ html, body, #app {
   pointer-events: none;
 }
 
+/* Windows 拖动区域 */
+.windows-drag-region {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  -webkit-app-region: drag;
+  z-index: 100;
+}
+
+.logo.windows-draggable {
+  -webkit-app-region: drag;
+  cursor: default;
+}
+
+/* Windows 窗口控制按钮 */
+.windows-controls {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 32px;
+  display: flex;
+  align-items: stretch;
+  z-index: 9999;
+}
+
+.windows-controls .windows-drag-area {
+  position: fixed;
+  top: 0;
+  left: 200px;
+  right: 138px;
+  height: 32px;
+  -webkit-app-region: drag;
+}
+
+.windows-controls .win-btn {
+  width: 46px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s;
+  -webkit-app-region: no-drag;
+}
+
+.windows-controls .win-btn:hover {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.windows-controls .win-btn.win-close:hover {
+  background: #e81123;
+  color: white;
+}
+
 /* 有标题栏时的容器调整 */
 .app-container.has-titlebar {
   padding-top: 38px;
@@ -215,6 +312,7 @@ html, body, #app {
   transition: width 0.3s;
   display: flex;
   flex-direction: column;
+  position: relative;
 }
 
 .logo {

@@ -1,6 +1,6 @@
 {
   "name": "ai-novel-trainer",
-  "version": "1.0.1-alpha",
+  "version": "1.0.2-alpha",
   "description": "AI 网文写作训练系统 - 利用 AI 生成练习题和评审反馈，帮助作者提升写作能力",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",

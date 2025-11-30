@@ -329,6 +329,57 @@ function regenerate() {
           </ul>
         </div>
         
+        <!-- 环境描写：地点和环境信息 -->
+        <div v-if="question.content?.location" class="section">
+          <h4>📍 地点信息</h4>
+          <p><strong>{{ question.content.location }}</strong></p>
+          <div class="env-meta">
+            <span v-if="question.content.locationType">🏷️ {{ question.content.locationType }}</span>
+            <span v-if="question.content.timeOfDay">🕐 {{ question.content.timeOfDay }}</span>
+            <span v-if="question.content.weather">🌤️ {{ question.content.weather }}</span>
+            <span v-if="question.content.season">🍂 {{ question.content.season }}</span>
+          </div>
+        </div>
+        
+        <!-- 环境描写：氛围 -->
+        <div v-if="question.content?.atmosphere" class="section">
+          <h4>🎭 目标氛围</h4>
+          <p>{{ question.content.atmosphere }}</p>
+        </div>
+        
+        <!-- 环境描写：剧情背景 -->
+        <div v-if="question.content?.plotContext" class="section">
+          <h4>📖 剧情背景</h4>
+          <p>{{ question.content.plotContext }}</p>
+        </div>
+        
+        <!-- 环境描写：关键元素 -->
+        <div v-if="question.content?.keyElements?.length" class="section">
+          <h4>🔑 关键元素</h4>
+          <div class="tags">
+            <el-tag v-for="(el, i) in question.content.keyElements" :key="i">{{ el }}</el-tag>
+          </div>
+        </div>
+        
+        <!-- 环境描写：感官要求 -->
+        <div v-if="question.content?.sensoryRequirements" class="section">
+          <h4>👁️ 感官描写要求</h4>
+          <div class="sensory-reqs">
+            <div v-if="question.content.sensoryRequirements.visual" class="sensory-item">
+              <strong>👀 视觉:</strong> {{ question.content.sensoryRequirements.visual }}
+            </div>
+            <div v-if="question.content.sensoryRequirements.auditory" class="sensory-item">
+              <strong>👂 听觉:</strong> {{ question.content.sensoryRequirements.auditory }}
+            </div>
+            <div v-if="question.content.sensoryRequirements.olfactory" class="sensory-item">
+              <strong>👃 嗅觉:</strong> {{ question.content.sensoryRequirements.olfactory }}
+            </div>
+            <div v-if="question.content.sensoryRequirements.tactile" class="sensory-item">
+              <strong>✋ 触觉:</strong> {{ question.content.sensoryRequirements.tactile }}
+            </div>
+          </div>
+        </div>
+        
         <!-- 背景（通用） -->
         <div v-if="question.content?.background" class="section">
           <h4>📖 场景背景</h4>
@@ -632,6 +683,28 @@ function regenerate() {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* 环境描写样式 */
+.env-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  color: #606266;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.sensory-reqs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sensory-item {
+  color: #606266;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .loading-card {

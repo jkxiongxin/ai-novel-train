@@ -300,6 +300,153 @@ onUnmounted(() => {
               <el-tag size="small" type="info">{{ practice.difficulty }}</el-tag>
             </div>
             
+            <!-- 题目描述（环境描写/章节创作等） -->
+            <div v-if="practice.question_content.description" class="section">
+              <h4>📝 题目描述</h4>
+              <p>{{ practice.question_content.description }}</p>
+            </div>
+            
+            <!-- 章节创作：章节标题和概要 -->
+            <div v-if="practice.question_content.chapterTitle" class="section">
+              <h4>📖 章节标题</h4>
+              <p class="chapter-title">{{ practice.question_content.chapterTitle }}</p>
+              <p v-if="practice.question_content.synopsis" class="synopsis">{{ practice.question_content.synopsis }}</p>
+            </div>
+            
+            <!-- 章节创作：开篇钩子 -->
+            <div v-if="practice.question_content.openingHook" class="section">
+              <h4>🎣 开篇钩子</h4>
+              <p>{{ practice.question_content.openingHook }}</p>
+            </div>
+            
+            <!-- 章节创作：场景列表 -->
+            <div v-if="practice.question_content.scenes?.length" class="section">
+              <h4>🎬 场景细纲</h4>
+              <div class="scenes-list">
+                <div
+                  v-for="(scene, index) in practice.question_content.scenes"
+                  :key="index"
+                  class="scene-card"
+                >
+                  <div class="scene-header">
+                    <span class="scene-number">场景 {{ scene.sceneNumber || index + 1 }}</span>
+                    <span class="scene-name">{{ scene.sceneName }}</span>
+                    <el-tag size="small" v-if="scene.wordCountSuggestion">约{{ scene.wordCountSuggestion }}字</el-tag>
+                  </div>
+                  <div class="scene-meta">
+                    <span v-if="scene.location">📍 {{ scene.location }}</span>
+                    <span v-if="scene.time">🕐 {{ scene.time }}</span>
+                  </div>
+                  <div v-if="scene.characters?.length" class="scene-characters">
+                    👥 出场角色: {{ scene.characters.join('、') }}
+                  </div>
+                  <div class="scene-content">{{ scene.content }}</div>
+                  <div v-if="scene.purpose" class="scene-purpose">
+                    <strong>叙事目的:</strong> {{ scene.purpose }}
+                  </div>
+                  <div v-if="scene.emotionalArc" class="scene-emotion">
+                    <strong>情绪变化:</strong> {{ scene.emotionalArc }}
+                  </div>
+                  <div v-if="scene.keyActions?.length" class="scene-actions">
+                    <strong>关键动作:</strong>
+                    <ul>
+                      <li v-for="(action, i) in scene.keyActions" :key="i">{{ action }}</li>
+                    </ul>
+                  </div>
+                  <div v-if="scene.dialogueNotes" class="scene-dialogue">
+                    <strong>对话要点:</strong> {{ scene.dialogueNotes }}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 章节创作：剧情点 -->
+            <div v-if="practice.question_content.plotPoints?.length" class="section">
+              <h4>📌 剧情要点</h4>
+              <div class="plot-points">
+                <div v-for="(point, i) in practice.question_content.plotPoints" :key="i" class="plot-point">
+                  <el-tag :type="point.importance === '主线' ? 'danger' : point.importance === '支线' ? 'warning' : 'info'" size="small">
+                    {{ point.importance }}
+                  </el-tag>
+                  <span>{{ point.point }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 章节创作：伏笔 -->
+            <div v-if="practice.question_content.foreshadowing?.length" class="section">
+              <h4>🔮 可埋伏笔</h4>
+              <ul class="list-items">
+                <li v-for="(f, i) in practice.question_content.foreshadowing" :key="i">{{ f }}</li>
+              </ul>
+            </div>
+            
+            <!-- 章节创作：结尾悬念 -->
+            <div v-if="practice.question_content.chapterEndHook" class="section">
+              <h4>🎭 章节结尾悬念</h4>
+              <p>{{ practice.question_content.chapterEndHook }}</p>
+            </div>
+            
+            <!-- 章节创作：写作注意事项 -->
+            <div v-if="practice.question_content.writingNotes?.length" class="section">
+              <h4>📋 写作注意事项</h4>
+              <ul class="list-items">
+                <li v-for="(n, i) in practice.question_content.writingNotes" :key="i">{{ n }}</li>
+              </ul>
+            </div>
+            
+            <!-- 环境描写：地点和环境信息 -->
+            <div v-if="practice.question_content.location" class="section">
+              <h4>📍 地点信息</h4>
+              <p><strong>{{ practice.question_content.location }}</strong></p>
+              <div class="env-meta">
+                <span v-if="practice.question_content.locationType">🏷️ {{ practice.question_content.locationType }}</span>
+                <span v-if="practice.question_content.timeOfDay">🕐 {{ practice.question_content.timeOfDay }}</span>
+                <span v-if="practice.question_content.weather">🌤️ {{ practice.question_content.weather }}</span>
+                <span v-if="practice.question_content.season">🍂 {{ practice.question_content.season }}</span>
+              </div>
+            </div>
+            
+            <!-- 环境描写：氛围 -->
+            <div v-if="practice.question_content.atmosphere" class="section">
+              <h4>🎭 目标氛围</h4>
+              <p>{{ practice.question_content.atmosphere }}</p>
+            </div>
+            
+            <!-- 环境描写：剧情背景 -->
+            <div v-if="practice.question_content.plotContext" class="section">
+              <h4>📖 剧情背景</h4>
+              <p>{{ practice.question_content.plotContext }}</p>
+            </div>
+            
+            <!-- 环境描写：关键元素 -->
+            <div v-if="practice.question_content.keyElements?.length" class="section">
+              <h4>🔑 关键元素</h4>
+              <div class="focus-tags">
+                <el-tag v-for="(el, i) in practice.question_content.keyElements" :key="i" size="small">{{ el }}</el-tag>
+              </div>
+            </div>
+            
+            <!-- 环境描写：感官要求 -->
+            <div v-if="practice.question_content.sensoryRequirements" class="section">
+              <h4>👁️ 感官描写要求</h4>
+              <div class="sensory-reqs">
+                <div v-if="practice.question_content.sensoryRequirements.visual" class="sensory-item">
+                  <strong>👀 视觉:</strong> {{ practice.question_content.sensoryRequirements.visual }}
+                </div>
+                <div v-if="practice.question_content.sensoryRequirements.auditory" class="sensory-item">
+                  <strong>👂 听觉:</strong> {{ practice.question_content.sensoryRequirements.auditory }}
+                </div>
+                <div v-if="practice.question_content.sensoryRequirements.olfactory" class="sensory-item">
+                  <strong>👃 嗅觉:</strong> {{ practice.question_content.sensoryRequirements.olfactory }}
+                </div>
+                <div v-if="practice.question_content.sensoryRequirements.tactile" class="sensory-item">
+                  <strong>✋ 触觉:</strong> {{ practice.question_content.sensoryRequirements.tactile }}
+                </div>
+              </div>
+            </div>
+            
+            <!-- 场景背景（通用） -->
             <div v-if="practice.question_content.background" class="section">
               <h4>📖 场景背景</h4>
               <p>{{ practice.question_content.background }}</p>
@@ -445,6 +592,153 @@ onUnmounted(() => {
           <el-tag size="small" type="info">{{ practice.difficulty }}</el-tag>
         </div>
         
+        <!-- 题目描述（环境描写/章节创作等） -->
+        <div v-if="practice.question_content.description" class="section">
+          <h4>📝 题目描述</h4>
+          <p>{{ practice.question_content.description }}</p>
+        </div>
+        
+        <!-- 章节创作：章节标题和概要 -->
+        <div v-if="practice.question_content.chapterTitle" class="section">
+          <h4>📖 章节标题</h4>
+          <p class="chapter-title">{{ practice.question_content.chapterTitle }}</p>
+          <p v-if="practice.question_content.synopsis" class="synopsis">{{ practice.question_content.synopsis }}</p>
+        </div>
+        
+        <!-- 章节创作：开篇钩子 -->
+        <div v-if="practice.question_content.openingHook" class="section">
+          <h4>🎣 开篇钩子</h4>
+          <p>{{ practice.question_content.openingHook }}</p>
+        </div>
+        
+        <!-- 章节创作：场景列表 -->
+        <div v-if="practice.question_content.scenes?.length" class="section">
+          <h4>🎬 场景细纲</h4>
+          <div class="scenes-list">
+            <div
+              v-for="(scene, index) in practice.question_content.scenes"
+              :key="index"
+              class="scene-card"
+            >
+              <div class="scene-header">
+                <span class="scene-number">场景 {{ scene.sceneNumber || index + 1 }}</span>
+                <span class="scene-name">{{ scene.sceneName }}</span>
+                <el-tag size="small" v-if="scene.wordCountSuggestion">约{{ scene.wordCountSuggestion }}字</el-tag>
+              </div>
+              <div class="scene-meta">
+                <span v-if="scene.location">📍 {{ scene.location }}</span>
+                <span v-if="scene.time">🕐 {{ scene.time }}</span>
+              </div>
+              <div v-if="scene.characters?.length" class="scene-characters">
+                👥 出场角色: {{ scene.characters.join('、') }}
+              </div>
+              <div class="scene-content">{{ scene.content }}</div>
+              <div v-if="scene.purpose" class="scene-purpose">
+                <strong>叙事目的:</strong> {{ scene.purpose }}
+              </div>
+              <div v-if="scene.emotionalArc" class="scene-emotion">
+                <strong>情绪变化:</strong> {{ scene.emotionalArc }}
+              </div>
+              <div v-if="scene.keyActions?.length" class="scene-actions">
+                <strong>关键动作:</strong>
+                <ul>
+                  <li v-for="(action, i) in scene.keyActions" :key="i">{{ action }}</li>
+                </ul>
+              </div>
+              <div v-if="scene.dialogueNotes" class="scene-dialogue">
+                <strong>对话要点:</strong> {{ scene.dialogueNotes }}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 章节创作：剧情点 -->
+        <div v-if="practice.question_content.plotPoints?.length" class="section">
+          <h4>📌 剧情要点</h4>
+          <div class="plot-points">
+            <div v-for="(point, i) in practice.question_content.plotPoints" :key="i" class="plot-point">
+              <el-tag :type="point.importance === '主线' ? 'danger' : point.importance === '支线' ? 'warning' : 'info'" size="small">
+                {{ point.importance }}
+              </el-tag>
+              <span>{{ point.point }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 章节创作：伏笔 -->
+        <div v-if="practice.question_content.foreshadowing?.length" class="section">
+          <h4>🔮 可埋伏笔</h4>
+          <ul class="list-items">
+            <li v-for="(f, i) in practice.question_content.foreshadowing" :key="i">{{ f }}</li>
+          </ul>
+        </div>
+        
+        <!-- 章节创作：结尾悬念 -->
+        <div v-if="practice.question_content.chapterEndHook" class="section">
+          <h4>🎭 章节结尾悬念</h4>
+          <p>{{ practice.question_content.chapterEndHook }}</p>
+        </div>
+        
+        <!-- 章节创作：写作注意事项 -->
+        <div v-if="practice.question_content.writingNotes?.length" class="section">
+          <h4>📋 写作注意事项</h4>
+          <ul class="list-items">
+            <li v-for="(n, i) in practice.question_content.writingNotes" :key="i">{{ n }}</li>
+          </ul>
+        </div>
+        
+        <!-- 环境描写：地点和环境信息 -->
+        <div v-if="practice.question_content.location" class="section">
+          <h4>📍 地点信息</h4>
+          <p><strong>{{ practice.question_content.location }}</strong></p>
+          <div class="env-meta">
+            <span v-if="practice.question_content.locationType">🏷️ {{ practice.question_content.locationType }}</span>
+            <span v-if="practice.question_content.timeOfDay">🕐 {{ practice.question_content.timeOfDay }}</span>
+            <span v-if="practice.question_content.weather">🌤️ {{ practice.question_content.weather }}</span>
+            <span v-if="practice.question_content.season">🍂 {{ practice.question_content.season }}</span>
+          </div>
+        </div>
+        
+        <!-- 环境描写：氛围 -->
+        <div v-if="practice.question_content.atmosphere" class="section">
+          <h4>🎭 目标氛围</h4>
+          <p>{{ practice.question_content.atmosphere }}</p>
+        </div>
+        
+        <!-- 环境描写：剧情背景 -->
+        <div v-if="practice.question_content.plotContext" class="section">
+          <h4>📖 剧情背景</h4>
+          <p>{{ practice.question_content.plotContext }}</p>
+        </div>
+        
+        <!-- 环境描写：关键元素 -->
+        <div v-if="practice.question_content.keyElements?.length" class="section">
+          <h4>🔑 关键元素</h4>
+          <div class="focus-tags">
+            <el-tag v-for="(el, i) in practice.question_content.keyElements" :key="i" size="small">{{ el }}</el-tag>
+          </div>
+        </div>
+        
+        <!-- 环境描写：感官要求 -->
+        <div v-if="practice.question_content.sensoryRequirements" class="section">
+          <h4>👁️ 感官描写要求</h4>
+          <div class="sensory-reqs">
+            <div v-if="practice.question_content.sensoryRequirements.visual" class="sensory-item">
+              <strong>👀 视觉:</strong> {{ practice.question_content.sensoryRequirements.visual }}
+            </div>
+            <div v-if="practice.question_content.sensoryRequirements.auditory" class="sensory-item">
+              <strong>👂 听觉:</strong> {{ practice.question_content.sensoryRequirements.auditory }}
+            </div>
+            <div v-if="practice.question_content.sensoryRequirements.olfactory" class="sensory-item">
+              <strong>👃 嗅觉:</strong> {{ practice.question_content.sensoryRequirements.olfactory }}
+            </div>
+            <div v-if="practice.question_content.sensoryRequirements.tactile" class="sensory-item">
+              <strong>✋ 触觉:</strong> {{ practice.question_content.sensoryRequirements.tactile }}
+            </div>
+          </div>
+        </div>
+        
+        <!-- 场景背景（通用） -->
         <div v-if="practice.question_content.background" class="section">
           <h4>📖 场景背景</h4>
           <p>{{ practice.question_content.background }}</p>
@@ -772,6 +1066,141 @@ onUnmounted(() => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+/* 章节创作样式 */
+.chapter-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+  margin-bottom: 8px;
+}
+
+.synopsis {
+  color: #606266;
+  font-style: italic;
+  background: #f5f7fa;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.scenes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scene-card {
+  background: #fff;
+  border: 1px solid #e4e7ed;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.scene-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.scene-number {
+  background: #409eff;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+.scene-name {
+  font-weight: bold;
+  color: #303133;
+  font-size: 14px;
+}
+
+.scene-meta {
+  display: flex;
+  gap: 12px;
+  color: #909399;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.scene-characters {
+  color: #606266;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.scene-content {
+  color: #303133;
+  line-height: 1.6;
+  padding: 10px;
+  background: #f5f7fa;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-size: 13px;
+}
+
+.scene-purpose,
+.scene-emotion,
+.scene-dialogue {
+  color: #606266;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.scene-actions {
+  color: #606266;
+  font-size: 12px;
+}
+
+.scene-actions ul {
+  margin: 4px 0 0 16px;
+  padding: 0;
+}
+
+.scene-actions li {
+  margin-bottom: 2px;
+}
+
+.plot-points {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plot-point {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+/* 环境描写样式 */
+.env-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: #606266;
+  font-size: 13px;
+  margin-top: 8px;
+}
+
+.sensory-reqs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sensory-item {
+  color: #606266;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .writing-area {
