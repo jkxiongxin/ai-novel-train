@@ -79,10 +79,10 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js')
     },
-    // macOS 使用隐藏式标题栏，Windows 使用无边框
+    // macOS 使用隐藏式标题栏，Windows 使用标准窗口框架（带菜单栏）
     ...(process.platform === 'darwin' 
       ? { titleBarStyle: 'hiddenInset' } 
-      : { frame: false, titleBarStyle: 'hidden' }
+      : { frame: true }  // Windows 使用标准窗口框架
     ),
     show: false, // 先隐藏，等加载完成后显示
     backgroundColor: '#f5f7fa'

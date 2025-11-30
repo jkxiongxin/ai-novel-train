@@ -76,35 +76,14 @@ const activeMenu = computed(() => {
 </script>
 
 <template>
-  <!-- Electron 桌面端顶部标题栏 -->
-  <div v-if="isElectron" class="electron-titlebar" :class="{ 'is-macos': isMacOS, 'is-windows': !isMacOS }">
+  <!-- Electron macOS 顶部标题栏 - 仅 macOS 显示（Windows 使用系统原生窗口） -->
+  <div v-if="isElectron && isMacOS" class="electron-titlebar is-macos">
     <div class="titlebar-drag-region"></div>
     <span class="titlebar-title">AI 网文训练师</span>
-    <!-- Windows 窗口控制按钮 -->
-    <div v-if="!isMacOS" class="windows-title-controls">
-      <button class="win-btn" @click="minimizeWindow" title="最小化">
-        <svg width="10" height="10" viewBox="0 0 10 10">
-          <path d="M0 5h10v1H0z" fill="currentColor"/>
-        </svg>
-      </button>
-      <button class="win-btn" @click="maximizeWindow" :title="isWindowMaximized ? '还原' : '最大化'">
-        <svg v-if="!isWindowMaximized" width="10" height="10" viewBox="0 0 10 10">
-          <path d="M0 0v10h10V0H0zm1 1h8v8H1V1z" fill="currentColor"/>
-        </svg>
-        <svg v-else width="10" height="10" viewBox="0 0 10 10">
-          <path d="M2 0v2H0v8h8V8h2V0H2zm6 8H1V3h7v5zm1-6H3V1h6v1z" fill="currentColor"/>
-        </svg>
-      </button>
-      <button class="win-btn win-close" @click="closeWindow" title="关闭">
-        <svg width="10" height="10" viewBox="0 0 10 10">
-          <path d="M1 0L0 1l4 4-4 4 1 1 4-4 4 4 1-1-4-4 4-4-1-1-4 4-4-4z" fill="currentColor"/>
-        </svg>
-      </button>
-    </div>
   </div>
   
   <!-- 桌面端布局 - 通过 CSS 媒体查询控制显示 -->
-  <el-container class="app-container desktop-only" :class="{ 'has-titlebar': isElectron }">
+  <el-container class="app-container desktop-only" :class="{ 'has-titlebar': isElectron && isMacOS }">
     <!-- 侧边栏 -->
     <el-aside :width="isCollapse ? '64px' : '200px'" class="app-aside">
       <div class="logo">
@@ -168,7 +147,7 @@ html, body, #app {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* ===== Electron 顶部标题栏样式 ===== */
+/* ===== Electron macOS 顶部标题栏样式 ===== */
 .electron-titlebar {
   position: fixed;
   top: 0;
@@ -188,11 +167,6 @@ html, body, #app {
   padding-left: 80px;
 }
 
-.electron-titlebar.is-windows {
-  /* Windows 上为窗口控制按钮留出空间 */
-  padding-right: 138px;
-}
-
 .titlebar-drag-region {
   position: absolute;
   top: 0;
@@ -210,40 +184,7 @@ html, body, #app {
   pointer-events: none;
 }
 
-/* Windows 标题栏窗口控制按钮 */
-.windows-title-controls {
-  position: absolute;
-  top: 0;
-  right: 0;
-  height: 38px;
-  display: flex;
-  align-items: stretch;
-  -webkit-app-region: no-drag;
-}
-
-.windows-title-controls .win-btn {
-  width: 46px;
-  height: 38px;
-  border: none;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.windows-title-controls .win-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.windows-title-controls .win-btn.win-close:hover {
-  background: #e81123;
-  color: white;
-}
-
-/* 有标题栏时的容器调整 */
+/* 有标题栏时的容器调整（仅 macOS） */
 .app-container.has-titlebar {
   padding-top: 38px;
   height: calc(100vh);
