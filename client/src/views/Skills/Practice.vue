@@ -36,7 +36,9 @@ const lastSavedAnswer = ref('')
 const generateOptions = ref({
   keywords: '',
   description: '',
-  saveToBank: true
+  saveToBank: true,
+  wordCountMin: 200,
+  wordCountMax: 500
 })
 const showAdvancedOptions = ref(false)
 
@@ -177,6 +179,10 @@ const generateQuestion = async () => {
       options.description = generateOptions.value.description.trim()
     }
     options.saveToBank = generateOptions.value.saveToBank
+    
+    // 添加字数区间参数
+    options.wordCountMin = generateOptions.value.wordCountMin
+    options.wordCountMax = generateOptions.value.wordCountMax
     
     const res = await generatePractice(route.params.id, options)
     question.value = res.data
@@ -475,6 +481,30 @@ onUnmounted(() => {
                       <div class="form-tip">更详细地描述你的需求，让题目更符合你的练习目标</div>
                     </el-form-item>
                     
+                    <el-form-item label="目标字数区间">
+                      <div class="word-count-range">
+                        <el-input-number
+                          v-model="generateOptions.wordCountMin"
+                          :min="10"
+                          :max="generateOptions.wordCountMax - 10"
+                          :step="10"
+                          size="small"
+                          controls-position="right"
+                        />
+                        <span class="range-separator">至</span>
+                        <el-input-number
+                          v-model="generateOptions.wordCountMax"
+                          :min="generateOptions.wordCountMin + 10"
+                          :max="30000"
+                          :step="50"
+                          size="small"
+                          controls-position="right"
+                        />
+                        <span class="range-unit">字</span>
+                      </div>
+                      <div class="form-tip">设置练习的目标字数范围，最小10字，最大3万字</div>
+                    </el-form-item>
+                    
                     <el-form-item>
                       <el-checkbox v-model="generateOptions.saveToBank">
                         将生成的题目保存到题目库，方便以后继续练习
@@ -752,6 +782,27 @@ onUnmounted(() => {
   font-size: 12px;
   color: #909399;
   margin-top: 4px;
+}
+
+/* 字数区间输入 */
+.word-count-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.word-count-range .el-input-number {
+  width: 120px;
+}
+
+.range-separator {
+  color: #909399;
+  font-size: 14px;
+}
+
+.range-unit {
+  color: #909399;
+  font-size: 14px;
 }
 
 /* 动作选项卡 */

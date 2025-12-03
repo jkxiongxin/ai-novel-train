@@ -307,7 +307,7 @@ router.delete('/:id', (req, res) => {
 router.post('/generate', async (req, res) => {
   try {
     const db = getDatabase();
-    const { skillName, category } = req.body;
+    const { skillName, category, description } = req.body;
     
     if (!skillName) {
       return res.status(400).json({
@@ -338,6 +338,11 @@ router.post('/generate', async (req, res) => {
       prompt = prompt.replace(/\{\{#category\}\}[\s\S]*?\{\{\/category\}\}/g, `所属分类：${category}`);
     } else {
       prompt = prompt.replace(/\{\{#category\}\}[\s\S]*?\{\{\/category\}\}/g, '');
+    }
+    
+    // 添加用户提供的描述说明
+    if (description) {
+      prompt += `\n\n【用户对该知识点的描述说明】\n${description}\n\n请根据以上描述说明，生成更符合用户需求的知识点内容。`;
     }
     
     // 调用 AI
@@ -432,7 +437,11 @@ router.post('/:id/practice/generate', async (req, res) => {
   try {
     const db = getDatabase();
     const { id } = req.params;
-    const { keywords, description, saveToBank = true } = req.body;
+    const { keywords, description, saveToBank = true, wordCountMin = 200, wordCountMax = 500 } = req.body;
+    
+    // 验证字数区间参数
+    const minCount = Math.max(10, Math.min(30000, parseInt(wordCountMin) || 200));
+    const maxCount = Math.max(minCount + 10, Math.min(30000, parseInt(wordCountMax) || 500));
     
     // 获取知识点信息
     const skill = db.prepare('SELECT * FROM writing_skills WHERE id = ?').get(id);
@@ -467,6 +476,8 @@ router.post('/:id/practice/generate', async (req, res) => {
     if (description) {
       customRequirements += `\n用户对题目的具体要求：${description}`;
     }
+    // 添加字数区间要求
+    customRequirements += `\n目标字数要求：${minCount}-${maxCount}字。请确保生成的题目难度与字数要求匹配，输出JSON中的wordCountRange字段必须设置为{"min":${minCount},"max":${maxCount}}。`;
     
     // 替换变量
     let prompt = template.content

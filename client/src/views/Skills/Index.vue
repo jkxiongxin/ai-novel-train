@@ -41,7 +41,8 @@ const addDialogVisible = ref(false)
 const addMode = ref('ai') // ai | manual
 const aiGenerateForm = ref({
   skillName: '',
-  category: ''
+  category: '',
+  description: ''
 })
 const manualForm = ref({
   name: '',
@@ -190,7 +191,7 @@ const startPractice = (skill) => {
 const openAddDialog = () => {
   addDialogVisible.value = true
   addMode.value = 'ai'
-  aiGenerateForm.value = { skillName: '', category: '' }
+  aiGenerateForm.value = { skillName: '', category: '', description: '' }
   generatedSkill.value = null
 }
 
@@ -205,7 +206,8 @@ const handleGenerate = async () => {
   try {
     const res = await generateSkill({
       skillName: aiGenerateForm.value.skillName.trim(),
-      category: aiGenerateForm.value.category || undefined
+      category: aiGenerateForm.value.category || undefined,
+      description: aiGenerateForm.value.description.trim() || undefined
     })
     generatedSkill.value = res.data
     ElMessage.success('知识点生成成功')
@@ -691,6 +693,15 @@ onMounted(() => {
                 <el-input 
                   v-model="aiGenerateForm.skillName" 
                   placeholder="例如：潜台词运用、悬念设置、人物出场..."
+                />
+              </el-form-item>
+              
+              <el-form-item label="描述说明（可选）">
+                <el-input
+                  v-model="aiGenerateForm.description"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="输入对该知识点的具体描述或期望内容，帮助 AI 更准确地理解你想要学习的内容。例如：我想学习如何在对话中暗示人物的真实想法，而不是直接说出来..."
                 />
               </el-form-item>
               
