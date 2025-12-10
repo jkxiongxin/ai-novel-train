@@ -12,7 +12,7 @@ import {
   updateSegment,
   deleteSegment
 } from '../../api/chapters'
-import { createFromSegment } from '../../api/typing'
+import { createFromSegment, createFromChapter } from '../../api/typing'
 
 const route = useRoute()
 const router = useRouter()
@@ -160,6 +160,17 @@ async function handleStartTyping(segment) {
   }
 }
 
+async function handleStartChapterTyping() {
+  try {
+    const res = await createFromChapter(chapter.value.id)
+    ElMessage.success('整章抄书练习创建成功')
+    router.push(`/typing/${res.data.id}`)
+  } catch (error) {
+    console.error('创建整章练习失败:', error)
+    ElMessage.error('创建整章练习失败')
+  }
+}
+
 function getSegmentTypeName(type) {
   return segmentTypes.value[type]?.name || type
 }
@@ -207,7 +218,12 @@ onMounted(() => {
       <!-- 原文展示 -->
       <el-card class="original-card">
         <template #header>
-          <span>章节原文</span>
+          <div class="original-card-header">
+            <span>章节原文</span>
+            <el-button type="primary" @click="handleStartChapterTyping">
+              📝 整章抄写
+            </el-button>
+          </div>
         </template>
         <div class="original-content">
           {{ chapter.content }}
@@ -377,6 +393,12 @@ onMounted(() => {
 .original-card {
   max-height: 300px;
   overflow: hidden;
+}
+
+.original-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .original-content {

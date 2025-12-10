@@ -2,6 +2,17 @@ const express = require('express');
 const router = express.Router();
 const { getDatabase } = require('../database/init');
 
+// Helper: check if a table has a specific column (for backward/forward compatibility)
+function hasColumn(db, table, column) {
+  try {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+    return cols.some(c => c.name === column);
+  } catch (err) {
+    console.error('检查列是否存在失败', err);
+    return false;
+  }
+}
+
 // 获取抄书练习列表
 router.get('/', (req, res) => {
   try {
@@ -14,13 +25,30 @@ router.get('/', (req, res) => {
       writing_style 
     } = req.query;
 
-    let query = `
-      SELECT tp.*, cs.chapter_id, nc.title as chapter_title, nc.novel_name
+    const useChapterId = hasColumn(db, 'typing_practices', 'chapter_id');
+    let query = '';
+    if (useChapterId) {
+      query = `
+      SELECT tp.*, 
+             cs.chapter_id as segment_chapter_id, 
+             COALESCE(nc1.title, nc2.title) as chapter_title, 
+             COALESCE(nc1.novel_name, nc2.novel_name) as novel_name
+      FROM typing_practices tp
+      LEFT JOIN chapter_segments cs ON tp.segment_id = cs.id
+      LEFT JOIN novel_chapters nc1 ON cs.chapter_id = nc1.id
+      LEFT JOIN novel_chapters nc2 ON tp.chapter_id = nc2.id
+      WHERE 1=1
+    `;
+    } else {
+      // fallback to older schema without typing_practices.chapter_id
+      query = `
+      SELECT tp.*, cs.chapter_id as segment_chapter_id, nc.title as chapter_title, nc.novel_name
       FROM typing_practices tp
       LEFT JOIN chapter_segments cs ON tp.segment_id = cs.id
       LEFT JOIN novel_chapters nc ON cs.chapter_id = nc.id
       WHERE 1=1
     `;
+    }
     let countQuery = 'SELECT COUNT(*) as total FROM typing_practices WHERE 1=1';
     const params = [];
 
@@ -73,13 +101,30 @@ router.get('/:id', (req, res) => {
     const db = getDatabase();
     const { id } = req.params;
 
-    const practice = db.prepare(`
-      SELECT tp.*, cs.chapter_id, nc.title as chapter_title, nc.novel_name
+    const useChapterIdForDetail = hasColumn(db, 'typing_practices', 'chapter_id');
+    let detailSql = '';
+    if (useChapterIdForDetail) {
+      detailSql = `
+      SELECT tp.*, 
+             cs.chapter_id as segment_chapter_id, 
+             COALESCE(nc1.title, nc2.title) as chapter_title, 
+             COALESCE(nc1.novel_name, nc2.novel_name) as novel_name
+      FROM typing_practices tp
+      LEFT JOIN chapter_segments cs ON tp.segment_id = cs.id
+      LEFT JOIN novel_chapters nc1 ON cs.chapter_id = nc1.id
+      LEFT JOIN novel_chapters nc2 ON tp.chapter_id = nc2.id
+      WHERE tp.id = ?
+    `;
+    } else {
+      detailSql = `
+      SELECT tp.*, cs.chapter_id as segment_chapter_id, nc.title as chapter_title, nc.novel_name
       FROM typing_practices tp
       LEFT JOIN chapter_segments cs ON tp.segment_id = cs.id
       LEFT JOIN novel_chapters nc ON cs.chapter_id = nc.id
       WHERE tp.id = ?
-    `).get(id);
+    `;
+    }
+    const practice = db.prepare(detailSql).get(id);
 
     if (!practice) {
       return res.status(404).json({
@@ -136,6 +181,64 @@ router.post('/from-segment/:segmentId', (req, res) => {
     res.status(500).json({
       success: false,
       message: '创建抄书练习失败',
+      error: error.message
+    });
+  }
+});
+
+// 从章节创建整章抄书练习
+router.post('/from-chapter/:chapterId', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { chapterId } = req.params;
+
+    const chapter = db.prepare('SELECT * FROM novel_chapters WHERE id = ?').get(chapterId);
+    if (!chapter) {
+      return res.status(404).json({
+        success: false,
+        message: '章节不存在'
+      });
+    }
+
+    const wordCount = chapter.content.replace(/\s/g, '').length;
+
+    const useChapterId = hasColumn(db, 'typing_practices', 'chapter_id');
+    let result;
+    if (useChapterId) {
+      result = db.prepare(`
+        INSERT INTO typing_practices 
+        (chapter_id, custom_content, original_content, segment_type, word_count)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(
+        chapterId,
+        chapter.content,
+        chapter.content,
+        'full_chapter',
+        wordCount
+      );
+    } else {
+      // Fallback for older DB schema: insert without chapter_id
+      result = db.prepare(`
+        INSERT INTO typing_practices 
+        (custom_content, original_content, segment_type, word_count)
+        VALUES (?, ?, ?, ?)
+      `).run(
+        chapter.content,
+        chapter.content,
+        'full_chapter',
+        wordCount
+      );
+    }
+
+    res.json({
+      success: true,
+      data: { id: result.lastInsertRowid },
+      message: '整章抄书练习创建成功'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '创建整章抄书练习失败',
       error: error.message
     });
   }

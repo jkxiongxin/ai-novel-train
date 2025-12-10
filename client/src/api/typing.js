@@ -15,6 +15,11 @@ export function createFromSegment(segmentId) {
   return request.post(`/typing/from-segment/${segmentId}`)
 }
 
+// 从章节创建整章抄书练习
+export function createFromChapter(chapterId) {
+  return request.post(`/typing/from-chapter/${chapterId}`)
+}
+
 // 创建自定义抄书练习
 export function createCustomTyping(data) {
   return request.post('/typing/custom', data)

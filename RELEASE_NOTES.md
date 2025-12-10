@@ -1,25 +1,16 @@
-## [1.0.3-alpha] - 2025-12-02
+## [v1.0.4-alpha] - 2025-12-02
 
-### 🐛 问题修复
 
-- **修复桌面版更新下载功能**：点击更新下载按钮时，现在会正确显示下载进度
-  - 添加下载开始提示对话框
-  - 任务栏显示下载进度条
-  - 下载失败时提供手动下载选项（跳转到 GitHub Release 页面）
-  - 更新提示对话框增加"前往下载页面"按钮
-  - 允许预发布版本（alpha/beta）的自动更新检测
-
-### 🔧 技术改进
-
-- 优化 electron-updater 配置，支持预发布版本更新
-- 修复文件名中文字符导致 GitHub 上传失败的问题
-- 添加 NSIS differentialPackage 支持增量更新
-
-### 🎉 新增功能
-- 新增知识点学习模块
+### 🎉 本次更新重点（主要针对抄书练习）
+- 优化抄书练习：实现左右视图布局（左侧输入，右侧原文），支持边看边抄
+- 原文展示区改为固定高度容器并启用滚动，当前输入位置会自动居中显示
+- 输入区域同样采用固定高度并支持自动滚动，以便用户在输入时不必手动滚动
+- 自动保存与计时器改善：加载 in_progress 时会恢复计时并继续计时；暂停/继续更可靠
+- 修复计时器在继续练习时未继续计时的问题
+- UI/交互改进：滚动样式、移动端布局适配、平滑滚动体验
 
 ### 📦 下载
 
-- **macOS (Apple Silicon)**: `AI-Novel-Trainer-1.0.3-alpha-mac-arm64.dmg`
-- **macOS (Intel)**: `AI-Novel-Trainer-1.0.3-alpha-mac-x64.dmg`
-- **Windows 安装程序**: `AI-Novel-Trainer-1.0.3-alpha-win-x64.exe`
+- **macOS (Apple Silicon)**: `AI-Novel-Trainer-1.0.4-alpha-mac-arm64.dmg`
+- **macOS (Intel)**: `AI-Novel-Trainer-1.0.4-alpha-mac-x64.dmg`
+- **Windows 安装程序**: `AI-Novel-Trainer-1.0.4-alpha-win-x64.exe`

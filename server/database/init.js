@@ -254,6 +254,7 @@ async function initDatabase() {
     CREATE TABLE IF NOT EXISTS typing_practices (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       segment_id INTEGER,
+      chapter_id INTEGER,
       custom_content TEXT,
       original_content TEXT NOT NULL,
       typed_content TEXT,
@@ -268,7 +269,8 @@ async function initDatabase() {
       started_at DATETIME,
       completed_at DATETIME,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      FOREIGN KEY (segment_id) REFERENCES chapter_segments(id) ON DELETE SET NULL
+      FOREIGN KEY (segment_id) REFERENCES chapter_segments(id) ON DELETE SET NULL,
+      FOREIGN KEY (chapter_id) REFERENCES novel_chapters(id) ON DELETE SET NULL
     )
   `);
 

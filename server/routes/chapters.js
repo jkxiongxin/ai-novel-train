@@ -12,7 +12,8 @@ const SEGMENT_TYPES = {
   environment: { name: '环境描写', description: '场景环境描写' },
   plot: { name: '情节推进', description: '故事情节发展' },
   transition: { name: '过渡衔接', description: '段落之间的过渡' },
-  narrative: { name: '叙事描述', description: '一般性叙述内容' }
+  narrative: { name: '叙事描述', description: '一般性叙述内容' },
+  full_chapter: { name: '整章抄写', description: '完整章节内容' }
 };
 
 // 文风类型定义

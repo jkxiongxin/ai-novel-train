@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
@@ -31,6 +31,13 @@ const timerInterval = ref(null)
 
 // 自动保存
 const autoSaveInterval = ref(null)
+
+// DOM 引用
+const originalTextContainer = ref(null)
+const typingTextarea = ref(null)
+// resize observer instance
+let resizeHandler = null
+let resizeObserver = null
 
 // 结果统计
 const result = ref({
@@ -134,6 +141,11 @@ async function loadPractice() {
       }
     } else if (practice.value.status === 'in_progress') {
       isStarted.value = true
+      // 恢复开始时间，使得计时能继续
+      startTime.value = Date.now() - (elapsedTime.value * 1000)
+      // 启动计时器和自动保存
+      startTimer()
+      startAutoSave()
     }
   } catch (error) {
     console.error('加载练习失败:', error)
@@ -141,6 +153,13 @@ async function loadPractice() {
     router.push('/typing')
   } finally {
     loading.value = false
+    // 确保加载完成后能正确居中当前待抄写位置
+    nextTick(() => {
+      updateOriginalTextPadding()
+      if (isStarted.value && !isCompleted.value) {
+        scrollToCurrentPosition()
+      }
+    })
   }
 }
 
@@ -173,6 +192,7 @@ async function handleStart() {
 }
 
 function startTimer() {
+  if (timerInterval.value) return
   timerInterval.value = setInterval(() => {
     if (!isPaused.value) {
       elapsedTime.value++
@@ -195,8 +215,43 @@ function startAutoSave() {
   }, 30000) // 每30秒自动保存
 }
 
+// 更新原文容器顶部/底部的 padding, 使得首字符也能居中显示
+function updateOriginalTextPadding() {
+  nextTick(() => {
+    const container = originalTextContainer.value
+    if (!container) return
+
+    const containerHeight = container.clientHeight
+    // 计算单字符高度/行高（使用内部元素的 line-height）
+    const inner = container.querySelector('.original-text')
+    let lineHeight = 36
+    if (inner) {
+      const cs = getComputedStyle(inner)
+      const lh = parseFloat(cs.lineHeight)
+      if (!isNaN(lh)) lineHeight = lh
+    }
+    // padding 设为容器高度的一半减去半个行高，这样首个行会尽量居中
+    const padding = Math.max(0, Math.floor(containerHeight / 2 - lineHeight / 2))
+
+    // 将 padding 应用到内部文本容器，以便滚动到 0 时首字符可以居中
+    if (inner) {
+      inner.style.paddingTop = `${padding}px`
+      inner.style.paddingBottom = `${padding}px`
+      // 保证当内容不足以滚动时，容器中间仍然显示内容
+      if (container.scrollHeight <= container.clientHeight) {
+        container.scrollTop = 0
+      }
+    }
+  })
+}
+
 function togglePause() {
   isPaused.value = !isPaused.value
+  // 当从已暂停恢复时，确保计时器在运行
+  if (!isPaused.value && isStarted.value && !isCompleted.value) {
+    startTimer()
+    startAutoSave()
+  }
 }
 
 async function handleComplete() {
@@ -212,18 +267,74 @@ async function handleComplete() {
     result.value = res.data
     
     // 停止计时器
-    if (timerInterval.value) {
-      clearInterval(timerInterval.value)
-    }
-    if (autoSaveInterval.value) {
-      clearInterval(autoSaveInterval.value)
-    }
+      if (timerInterval.value) {
+        clearInterval(timerInterval.value)
+        timerInterval.value = null
+      }
+      if (autoSaveInterval.value) {
+        clearInterval(autoSaveInterval.value)
+        autoSaveInterval.value = null
+      }
     
     ElMessage.success('练习完成！')
   } catch (error) {
     console.error('完成练习失败:', error)
   }
 }
+
+// 自动滚动到当前位置
+function scrollToCurrentPosition() {
+  nextTick(() => {
+    // 滚动原文区域 - 让当前字符显示在中间
+    const container = originalTextContainer.value
+    if (container) {
+      const currentChar = container.querySelector('.char.current')
+      if (currentChar) {
+        const containerRect = container.getBoundingClientRect()
+        const charRect = currentChar.getBoundingClientRect()
+        // charTopRelative: distance from container scroll top to char's top
+        const charTopRelative = charRect.top - containerRect.top + container.scrollTop
+        const containerHeight = container.clientHeight
+        const scrollTarget = charTopRelative - containerHeight / 2 + (charRect.height / 2)
+        const maxScrollTop = container.scrollHeight - containerHeight
+        const safeScrollTarget = Math.max(0, Math.min(maxScrollTop, scrollTarget))
+        // 有时 layout 未稳定，先平滑滚动一次，然后确保最终位置
+        container.scrollTo({ top: safeScrollTarget, behavior: 'smooth' })
+        setTimeout(() => {
+          container.scrollTo({ top: safeScrollTarget, behavior: 'instant' })
+        }, 120)
+      }
+    }
+    
+    // 滚动输入区域 - 让光标位置显示在中间
+    const textarea = document.getElementById('typing-input')
+    if (textarea) {
+      const lineHeight = parseInt(getComputedStyle(textarea).lineHeight) || 36
+      const textBeforeCursor = typedText.value
+      const lines = textBeforeCursor.split('\n').length
+      const containerHeight = textarea.clientHeight
+      const cursorTop = lines * lineHeight
+      const scrollTarget = cursorTop - containerHeight / 2
+      textarea.scrollTo({ top: Math.max(0, scrollTarget), behavior: 'smooth' })
+    }
+  })
+}
+
+// 监听输入变化，自动滚动
+watch(typedText, () => {
+  if (isStarted.value && !isCompleted.value) {
+    scrollToCurrentPosition()
+  }
+})
+
+// 当渲染文本变化（加载或输入变化）时，更新 padding 并滚动到当前字符
+watch(renderedText, () => {
+  if (!originalTextContainer.value) return
+  updateOriginalTextPadding()
+  if (isStarted.value && !isCompleted.value) {
+    scrollToCurrentPosition()
+  }
+})
 
 // 监听输入完成
 watch(() => stats.value.progress, (newVal) => {
@@ -257,6 +368,22 @@ function handleRestart() {
 onMounted(() => {
   loadPractice()
   loadMeta()
+
+  // 初始化容器 padding 和监听大小变化
+  nextTick(() => {
+    updateOriginalTextPadding()
+    // ResizeObserver 优先
+    try {
+      if (window.ResizeObserver && originalTextContainer.value) {
+        resizeObserver = new ResizeObserver(() => { updateOriginalTextPadding(); scrollToCurrentPosition() })
+        resizeObserver.observe(originalTextContainer.value)
+      }
+    } catch (e) {
+      // 如果不支持 ResizeObserver，使用 window resize 事件
+    }
+    resizeHandler = () => { updateOriginalTextPadding(); scrollToCurrentPosition() }
+    window.addEventListener('resize', resizeHandler)
+  })
 })
 
 onUnmounted(() => {
@@ -265,6 +392,23 @@ onUnmounted(() => {
   }
   if (autoSaveInterval.value) {
     clearInterval(autoSaveInterval.value)
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect()
+    resizeObserver = null
+  }
+  if (resizeHandler) {
+    window.removeEventListener('resize', resizeHandler)
+    resizeHandler = null
+  }
+  // 清理计时器引用
+  if (timerInterval.value) {
+    clearInterval(timerInterval.value)
+    timerInterval.value = null
+  }
+  if (autoSaveInterval.value) {
+    clearInterval(autoSaveInterval.value)
+    autoSaveInterval.value = null
   }
 })
 </script>
@@ -319,70 +463,75 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- 原文展示区 -->
-      <el-card class="original-card">
-        <template #header>
-          <div class="card-header">
-            <span>原文</span>
-            <el-progress 
-              :percentage="stats.progress" 
-              :stroke-width="8"
-              :format="() => `${stats.progress.toFixed(1)}%`"
-              style="width: 200px;"
-            />
+      <!-- 左右布局的主要练习区域 -->
+      <div class="main-practice-area" v-if="!isCompleted">
+        <!-- 左侧：输入区域 -->
+        <el-card class="input-card">
+          <template #header>
+            <div class="card-header">
+              <span>输入区域</span>
+              <div class="actions" v-if="isStarted">
+                <el-button size="small" @click="togglePause">
+                  {{ isPaused ? '继续' : '暂停' }}
+                </el-button>
+                <el-button type="primary" size="small" @click="handleComplete">
+                  完成
+                </el-button>
+              </div>
+            </div>
+          </template>
+          
+          <div v-if="!isStarted" class="start-prompt">
+            <el-button type="primary" size="large" @click="handleStart">
+              开始练习
+            </el-button>
+            <p>点击开始后，请在输入框中抄写右侧原文</p>
           </div>
-        </template>
-        <div class="original-text">
-          <span
-            v-for="(item, index) in renderedText"
-            :key="index"
-            class="char"
-            :class="{
-              'correct': item.status === 'correct',
-              'error': item.status === 'error',
-              'current': item.isCurrent
-            }"
-          >{{ item.char }}</span>
-        </div>
-      </el-card>
-
-      <!-- 输入区域 -->
-      <el-card class="input-card" v-if="!isCompleted">
-        <template #header>
-          <div class="card-header">
-            <span>输入区域</span>
-            <div class="actions" v-if="isStarted">
-              <el-button size="small" @click="togglePause">
-                {{ isPaused ? '继续' : '暂停' }}
-              </el-button>
-              <el-button type="primary" size="small" @click="handleComplete">
-                完成
-              </el-button>
+          
+          <div v-else class="typing-area">
+            <el-input
+              id="typing-input"
+              v-model="typedText"
+              type="textarea"
+              :rows="20"
+              placeholder="在此处输入..."
+              :disabled="isPaused || isCompleted"
+            />
+            <div class="typing-hint" v-if="isPaused">
+              <el-tag type="warning">已暂停</el-tag>
             </div>
           </div>
-        </template>
-        
-        <div v-if="!isStarted" class="start-prompt">
-          <el-button type="primary" size="large" @click="handleStart">
-            开始练习
-          </el-button>
-          <p>点击开始后，请在下方输入框中抄写上方原文</p>
-        </div>
-        
-        <div v-else class="typing-area">
-          <el-input
-            id="typing-input"
-            v-model="typedText"
-            type="textarea"
-            :rows="10"
-            placeholder="在此处输入..."
-            :disabled="isPaused || isCompleted"
-          />
-          <div class="typing-hint" v-if="isPaused">
-            <el-tag type="warning">已暂停</el-tag>
+        </el-card>
+
+        <!-- 右侧：原文展示区 -->
+        <el-card class="original-card">
+          <template #header>
+            <div class="card-header">
+              <span>待抄写原文</span>
+              <el-progress 
+                :percentage="stats.progress" 
+                :stroke-width="8"
+                :format="() => `${stats.progress.toFixed(1)}%`"
+                style="width: 150px;"
+              />
+            </div>
+          </template>
+          <div class="original-text-container" ref="originalTextContainer">
+            <div class="original-text">
+              <span
+                v-for="(item, index) in renderedText"
+                :key="index"
+                class="char"
+                :class="{
+                  'correct': item.status === 'correct',
+                  'error': item.status === 'error',
+                  'current': item.isCurrent
+                }"
+              >{{ item.char }}</span>
+            </div>
           </div>
-        </div>
-      </el-card>
+        </el-card>
+      </div>
 
       <!-- 完成结果 -->
       <el-card class="result-card" v-if="isCompleted">
@@ -455,6 +604,67 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* 左右布局的主要练习区域 */
+.main-practice-area {
+  display: flex;
+  gap: 20px;
+  min-height: 500px;
+}
+
+.main-practice-area .input-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-practice-area .input-card :deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-practice-area .original-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.main-practice-area .original-card :deep(.el-card__body) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 原文容器 - 固定高度，超出滚动 */
+.original-text-container {
+  flex: 1;
+  max-height: 450px;
+  overflow-y: auto;
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 12px;
+  background: #fafafa;
+}
+
+.original-text-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.original-text-container::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.original-text-container::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 4px;
+}
+
+.original-text-container::-webkit-scrollbar-thumb:hover {
+  background: #909399;
 }
 
 .stats-bar {
@@ -542,11 +752,46 @@ onUnmounted(() => {
 
 .typing-area {
   position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-height: 450px;
+}
+
+.typing-area :deep(.el-textarea) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .typing-area :deep(.el-textarea__inner) {
   font-size: 18px;
   line-height: 2;
+  flex: 1;
+  height: 450px !important;
+  max-height: 450px;
+  resize: none;
+  overflow-y: auto;
+}
+
+/* 输入框滚动条样式 */
+.typing-area :deep(.el-textarea__inner)::-webkit-scrollbar {
+  width: 8px;
+}
+
+.typing-area :deep(.el-textarea__inner)::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.typing-area :deep(.el-textarea__inner)::-webkit-scrollbar-thumb {
+  background: #c0c4cc;
+  border-radius: 4px;
+}
+
+.typing-area :deep(.el-textarea__inner)::-webkit-scrollbar-thumb:hover {
+  background: #909399;
 }
 
 .typing-hint {
@@ -634,6 +879,32 @@ onUnmounted(() => {
     font-size: 10px;
   }
   
+  /* 移动端改为上下布局 */
+  .main-practice-area {
+    flex-direction: column;
+    min-height: auto;
+  }
+  
+  .main-practice-area .input-card,
+  .main-practice-area .original-card {
+    flex: none;
+  }
+  
+  .original-text-container {
+    max-height: 250px;
+  }
+  
+  .typing-area {
+    max-height: 250px;
+  }
+  
+  .typing-area :deep(.el-textarea__inner) {
+    height: 250px !important;
+    max-height: 250px;
+    font-size: 15px;
+    line-height: 1.8;
+  }
+  
   .original-text {
     font-size: 15px;
     line-height: 1.8;
@@ -651,11 +922,6 @@ onUnmounted(() => {
   
   .start-prompt {
     padding: 20px;
-  }
-  
-  .typing-area :deep(.el-textarea__inner) {
-    font-size: 15px;
-    line-height: 1.8;
   }
   
   .result-stats {

@@ -338,6 +338,34 @@ const migrations = [
 
       console.log('迁移 v4: 技巧练习题库表创建完成');
     }
+  },
+  {
+    version: 5,
+    name: '整章抄写功能',
+    description: '为抄书练习表添加chapter_id字段，支持整章抄写',
+    up: (db) => {
+      console.log('迁移 v5: 添加整章抄写支持...');
+      
+      // 检查chapter_id列是否已存在
+      const columns = db.prepare("PRAGMA table_info(typing_practices)").all();
+      const hasChapterId = columns.some(col => col.name === 'chapter_id');
+      
+      if (!hasChapterId) {
+        db.exec(`
+          ALTER TABLE typing_practices ADD COLUMN chapter_id INTEGER REFERENCES novel_chapters(id) ON DELETE SET NULL
+        `);
+        console.log('迁移 v5: chapter_id 列添加成功');
+      } else {
+        console.log('迁移 v5: chapter_id 列已存在，跳过');
+      }
+
+      // 创建索引
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_typing_practices_chapter ON typing_practices(chapter_id);
+      `);
+
+      console.log('迁移 v5: 整章抄写功能迁移完成');
+    }
   }
 ];
 

@@ -9,9 +9,10 @@ import {
   getTypingStats,
   getRandomSegment,
   createFromSegment,
-  createCustomTyping
+  createCustomTyping,
+  createFromChapter
 } from '../../api/typing'
-import { getSegmentTypes, getWritingStyles, getSegments } from '../../api/chapters'
+import { getSegmentTypes, getWritingStyles, getSegments, getChapters } from '../../api/chapters'
 
 const router = useRouter()
 const loading = ref(false)
@@ -58,6 +59,13 @@ const customForm = ref({
   segment_type: 'narrative',
   writing_style: 'plain'
 })
+
+// 章节选择对话框（整章抄写）
+const chapterDialogVisible = ref(false)
+const chapterLoading = ref(false)
+const chapterList = ref([])
+const chapterTotal = ref(0)
+const chapterPage = ref(1)
 
 const statusOptions = [
   { value: '', label: '全部状态' },
@@ -226,6 +234,46 @@ async function handleCustomSubmit() {
   }
 }
 
+// 打开章节选择对话框（整章抄写）
+async function openChapterDialog() {
+  chapterDialogVisible.value = true
+  chapterPage.value = 1
+  await loadChapters()
+}
+
+async function loadChapters() {
+  chapterLoading.value = true
+  try {
+    const res = await getChapters({
+      page: chapterPage.value,
+      pageSize: 20
+    })
+    chapterList.value = res.data.list
+    chapterTotal.value = res.data.total
+  } catch (error) {
+    console.error('加载章节失败:', error)
+  } finally {
+    chapterLoading.value = false
+  }
+}
+
+async function handleSelectChapter(chapter) {
+  try {
+    const res = await createFromChapter(chapter.id)
+    ElMessage.success('整章抄书练习创建成功')
+    chapterDialogVisible.value = false
+    router.push(`/typing/${res.data.id}`)
+  } catch (error) {
+    console.error('创建整章练习失败:', error)
+    ElMessage.error('创建整章练习失败')
+  }
+}
+
+function handleChapterPageChange(page) {
+  chapterPage.value = page
+  loadChapters()
+}
+
 function formatTime(seconds) {
   if (!seconds) return '0分钟'
   const hours = Math.floor(seconds / 3600)
@@ -308,6 +356,9 @@ onMounted(() => {
         </el-button>
         <el-button type="success" size="large" :icon="Plus" @click="openSegmentDialog">
           选择片段
+        </el-button>
+        <el-button type="info" size="large" @click="openChapterDialog">
+          📖 整章抄写
         </el-button>
         <el-button type="warning" size="large" :icon="Edit" @click="openCustomDialog">
           自定义内容
@@ -533,6 +584,42 @@ onMounted(() => {
         <el-button type="primary" @click="handleCustomSubmit">开始抄写</el-button>
       </template>
     </el-dialog>
+
+    <!-- 章节选择对话框（整章抄写） -->
+    <el-dialog v-model="chapterDialogVisible" title="选择章节（整章抄写）" width="800px">
+      <div class="chapter-list" v-loading="chapterLoading">
+        <div
+          v-for="chapter in chapterList"
+          :key="chapter.id"
+          class="chapter-item"
+          @click="handleSelectChapter(chapter)"
+        >
+          <div class="chapter-header">
+            <span class="chapter-title">{{ chapter.title }}</span>
+            <span class="chapter-words">{{ chapter.word_count }}字</span>
+          </div>
+          <div class="chapter-meta">
+            <span v-if="chapter.novel_name">《{{ chapter.novel_name }}》</span>
+            <span v-if="chapter.author">作者：{{ chapter.author }}</span>
+          </div>
+          <div class="chapter-preview">
+            {{ chapter.content?.slice(0, 150) }}{{ chapter.content?.length > 150 ? '...' : '' }}
+          </div>
+        </div>
+        <el-empty v-if="chapterList.length === 0 && !chapterLoading" description="暂无章节，请先添加章节">
+          <el-button type="primary" @click="$router.push('/chapters')">去添加章节</el-button>
+        </el-empty>
+      </div>
+      <el-pagination
+        v-if="chapterTotal > 20"
+        class="chapter-pagination"
+        :current-page="chapterPage"
+        :page-size="20"
+        :total="chapterTotal"
+        layout="prev, pager, next"
+        @current-change="handleChapterPageChange"
+      />
+    </el-dialog>
   </div>
 </template>
 
@@ -689,6 +776,62 @@ onMounted(() => {
   margin-top: 8px;
   color: #909399;
   font-size: 12px;
+}
+
+.chapter-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.chapter-item {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.chapter-item:hover {
+  border-color: #409eff;
+  box-shadow: 0 2px 12px rgba(64, 158, 255, 0.2);
+}
+
+.chapter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.chapter-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #303133;
+}
+
+.chapter-words {
+  color: #909399;
+  font-size: 12px;
+}
+
+.chapter-meta {
+  display: flex;
+  gap: 12px;
+  color: #909399;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.chapter-preview {
+  color: #606266;
+  line-height: 1.6;
+  font-size: 14px;
+}
+
+.chapter-pagination {
+  margin-top: 16px;
+  justify-content: center;
 }
 
 @media (max-width: 1200px) {
