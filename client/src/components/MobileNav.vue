@@ -10,7 +10,8 @@ import {
   Collection,
   DataAnalysis,
   Setting,
-  Sunrise
+  Sunrise,
+  MagicStick
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -20,8 +21,8 @@ const router = useRouter()
 const navItems = [
   { path: '/', icon: House, title: '首页', match: ['/'] },
   { path: '/practice', icon: Edit, title: '练习', match: ['/practice', '/questions'] },
-  { path: '/freewrite', icon: Sunrise, title: '随心写', match: ['/freewrite'] },
-  { path: '/history', icon: Collection, title: '历史', match: ['/history', '/evaluation'] },
+  { path: '/mojing', icon: MagicStick, title: '墨境', match: ['/mojing'] },
+  { path: '/history', icon: Collection, title: '历史', match: ['/history', '/evaluation', '/freewrite'] },
   { path: '/settings', icon: Setting, title: '设置', match: ['/settings', '/prompts', '/dictionary', '/statistics', '/chapters', '/typing', '/skills'] }
 ]
 

@@ -204,6 +204,25 @@ onMounted(async () => {
         <el-icon class="freewrite-arrow"><ArrowRight /></el-icon>
       </div>
     </el-card>
+
+    <!-- 墨境游戏化模块入口 -->
+    <el-card class="freewrite-entry mojing-entry" @click="$router.push('/mojing')">
+      <div class="freewrite-content">
+        <div class="freewrite-left">
+          <div class="freewrite-icon mojing-icon">🖌️</div>
+          <div class="freewrite-info">
+            <h3>墨境 · 写作修炼</h3>
+            <p>游戏化写作训练，六维成长，解锁成就</p>
+          </div>
+        </div>
+        <div class="freewrite-features">
+          <el-tag size="small" type="primary">⚡ 每日任务</el-tag>
+          <el-tag size="small" type="success">📈 属性成长</el-tag>
+          <el-tag size="small" type="warning">🏆 成就系统</el-tag>
+        </div>
+        <el-icon class="freewrite-arrow"><ArrowRight /></el-icon>
+      </div>
+    </el-card>
     
     <!-- 最近7天 -->
     <el-card class="recent-stats">
@@ -417,5 +436,23 @@ onMounted(async () => {
 .freewrite-arrow {
   font-size: 20px;
   color: #909399;
+}
+
+/* 墨境入口特殊样式 */
+.mojing-entry .mojing-icon {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+}
+
+.mojing-entry:hover .mojing-icon {
+  animation: ink-glow 1.5s ease infinite;
+}
+
+@keyframes ink-glow {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.6);
+  }
 }
 </style>

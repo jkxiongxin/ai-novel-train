@@ -366,6 +366,312 @@ const migrations = [
 
       console.log('迁移 v5: 整章抄写功能迁移完成');
     }
+  },
+  {
+    version: 6,
+    name: '墨境写作成长系统',
+    description: '添加游戏化写作训练系统：用户档案、六维属性、经验值、成就、墨点/墨线/墨章任务、每日挑战',
+    up: (db) => {
+      console.log('迁移 v6: 创建墨境写作成长系统表...');
+      
+      // 1. 用户档案表（六维属性 + 等级）
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_profile (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          nickname TEXT DEFAULT '故事编织者',
+          avatar TEXT,
+          current_level INTEGER DEFAULT 1,
+          total_xp INTEGER DEFAULT 0,
+          current_title TEXT DEFAULT '墨境新人',
+          -- 六维属性（满分100）
+          attr_character INTEGER DEFAULT 10,
+          attr_conflict INTEGER DEFAULT 10,
+          attr_scene INTEGER DEFAULT 10,
+          attr_dialogue INTEGER DEFAULT 10,
+          attr_rhythm INTEGER DEFAULT 10,
+          attr_style INTEGER DEFAULT 10,
+          -- 连续打卡
+          current_streak INTEGER DEFAULT 0,
+          longest_streak INTEGER DEFAULT 0,
+          last_practice_date DATE,
+          -- 统计
+          total_practices INTEGER DEFAULT 0,
+          total_words INTEGER DEFAULT 0,
+          total_time_spent INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 2. 经验值流水表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_xp_transactions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          source_type TEXT NOT NULL,
+          source_id INTEGER,
+          xp_amount INTEGER NOT NULL,
+          attr_type TEXT,
+          attr_amount INTEGER DEFAULT 0,
+          description TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 3. 等级配置表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_level_config (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          level INTEGER UNIQUE NOT NULL,
+          required_xp INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          stage TEXT NOT NULL,
+          description TEXT,
+          unlock_features TEXT
+        )
+      `);
+
+      // 4. 墨点/墨线/墨章任务模板表（预设库）
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_task_templates (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          task_type TEXT NOT NULL,
+          code TEXT UNIQUE NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL,
+          requirements TEXT,
+          time_limit INTEGER,
+          word_limit_min INTEGER,
+          word_limit_max INTEGER,
+          attr_type TEXT NOT NULL,
+          xp_reward INTEGER NOT NULL,
+          attr_reward INTEGER DEFAULT 1,
+          difficulty TEXT DEFAULT 'normal',
+          tags TEXT,
+          is_active BOOLEAN DEFAULT 1,
+          use_count INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 5. 每日任务池表（AI生成 + 预设混合）
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_daily_tasks (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          task_date DATE NOT NULL,
+          template_id INTEGER,
+          task_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL,
+          requirements TEXT,
+          time_limit INTEGER,
+          word_limit_min INTEGER,
+          word_limit_max INTEGER,
+          attr_type TEXT NOT NULL,
+          xp_reward INTEGER NOT NULL,
+          attr_reward INTEGER DEFAULT 1,
+          difficulty TEXT DEFAULT 'normal',
+          source TEXT DEFAULT 'preset',
+          content_hash TEXT,
+          is_claimed BOOLEAN DEFAULT 0,
+          is_completed BOOLEAN DEFAULT 0,
+          sort_order INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (template_id) REFERENCES mojing_task_templates(id)
+        )
+      `);
+
+      // 6. 任务完成记录表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_task_records (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          task_id INTEGER NOT NULL,
+          task_type TEXT NOT NULL,
+          content TEXT,
+          word_count INTEGER DEFAULT 0,
+          time_spent INTEGER DEFAULT 0,
+          status TEXT DEFAULT 'draft',
+          score REAL,
+          ai_feedback TEXT,
+          xp_earned INTEGER DEFAULT 0,
+          attr_earned INTEGER DEFAULT 0,
+          attr_type TEXT,
+          submitted_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (task_id) REFERENCES mojing_daily_tasks(id) ON DELETE CASCADE
+        )
+      `);
+
+      // 7. 成就定义表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_achievements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          code TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          category TEXT NOT NULL,
+          icon TEXT,
+          xp_reward INTEGER DEFAULT 0,
+          requirement_type TEXT NOT NULL,
+          requirement_value INTEGER NOT NULL,
+          is_hidden BOOLEAN DEFAULT 0,
+          sort_order INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 8. 用户成就解锁表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_user_achievements (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          achievement_id INTEGER NOT NULL,
+          unlocked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (achievement_id) REFERENCES mojing_achievements(id) ON DELETE CASCADE
+        )
+      `);
+
+      // 9. 每日挑战表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_daily_challenges (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          challenge_date DATE UNIQUE NOT NULL,
+          challenge_type TEXT NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT,
+          target_value INTEGER NOT NULL,
+          current_value INTEGER DEFAULT 0,
+          xp_reward INTEGER DEFAULT 50,
+          bonus_multiplier REAL DEFAULT 1.0,
+          is_completed BOOLEAN DEFAULT 0,
+          completed_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 10. 周挑战表（墨章）
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_weekly_challenges (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          week_start DATE NOT NULL,
+          week_end DATE NOT NULL,
+          title TEXT NOT NULL,
+          theme TEXT NOT NULL,
+          description TEXT,
+          requirements TEXT,
+          word_limit_min INTEGER DEFAULT 800,
+          word_limit_max INTEGER DEFAULT 1500,
+          xp_reward INTEGER DEFAULT 200,
+          is_active BOOLEAN DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 11. 周挑战提交表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_weekly_submissions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          challenge_id INTEGER NOT NULL,
+          content TEXT NOT NULL,
+          word_count INTEGER DEFAULT 0,
+          time_spent INTEGER DEFAULT 0,
+          score REAL,
+          ai_feedback TEXT,
+          highlights TEXT,
+          improvements TEXT,
+          xp_earned INTEGER DEFAULT 0,
+          status TEXT DEFAULT 'draft',
+          submitted_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (challenge_id) REFERENCES mojing_weekly_challenges(id) ON DELETE CASCADE
+        )
+      `);
+
+      // 12. 随机奖励配置表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_reward_config (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          reward_type TEXT NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          icon TEXT,
+          rarity TEXT DEFAULT 'common',
+          drop_rate REAL DEFAULT 0.1,
+          xp_value INTEGER DEFAULT 0,
+          is_active BOOLEAN DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 13. 用户物品背包表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_inventory (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          item_type TEXT NOT NULL,
+          item_id INTEGER,
+          item_name TEXT NOT NULL,
+          quantity INTEGER DEFAULT 1,
+          source TEXT,
+          acquired_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 14. 连续打卡奖励配置表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS mojing_streak_rewards (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          streak_days INTEGER UNIQUE NOT NULL,
+          xp_multiplier REAL DEFAULT 1.0,
+          bonus_xp INTEGER DEFAULT 0,
+          reward_type TEXT,
+          reward_value TEXT,
+          badge_name TEXT,
+          description TEXT
+        )
+      `);
+
+      // 创建索引
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_mojing_xp_source ON mojing_xp_transactions(source_type);
+        CREATE INDEX IF NOT EXISTS idx_mojing_xp_date ON mojing_xp_transactions(created_at);
+        CREATE INDEX IF NOT EXISTS idx_mojing_tasks_type ON mojing_task_templates(task_type);
+        CREATE INDEX IF NOT EXISTS idx_mojing_tasks_attr ON mojing_task_templates(attr_type);
+        CREATE INDEX IF NOT EXISTS idx_mojing_daily_date ON mojing_daily_tasks(task_date);
+        CREATE INDEX IF NOT EXISTS idx_mojing_daily_type ON mojing_daily_tasks(task_type);
+        CREATE INDEX IF NOT EXISTS idx_mojing_records_task ON mojing_task_records(task_id);
+        CREATE INDEX IF NOT EXISTS idx_mojing_records_status ON mojing_task_records(status);
+        CREATE INDEX IF NOT EXISTS idx_mojing_achievements_category ON mojing_achievements(category);
+        CREATE INDEX IF NOT EXISTS idx_mojing_user_achievements ON mojing_user_achievements(achievement_id);
+        CREATE INDEX IF NOT EXISTS idx_mojing_challenges_date ON mojing_daily_challenges(challenge_date);
+        CREATE INDEX IF NOT EXISTS idx_mojing_weekly_date ON mojing_weekly_challenges(week_start);
+      `);
+
+      // 添加 AI 功能锚点
+      const features = [
+        { key: 'mojing_task_generate', name: '墨境任务生成', description: 'AI 生成墨点/墨线写作任务变体' },
+        { key: 'mojing_task_evaluate', name: '墨境任务评审', description: 'AI 评审墨境任务提交内容' },
+        { key: 'mojing_weekly_evaluate', name: '墨章评审', description: 'AI 评审周挑战短篇作品' }
+      ];
+
+      const insertFeature = db.prepare(`
+        INSERT OR IGNORE INTO ai_feature_config (feature_key, feature_name, feature_description)
+        VALUES (?, ?, ?)
+      `);
+
+      for (const feature of features) {
+        insertFeature.run(feature.key, feature.name, feature.description);
+      }
+
+      // 初始化用户档案（如果不存在）
+      const existingProfile = db.prepare('SELECT id FROM mojing_profile LIMIT 1').get();
+      if (!existingProfile) {
+        db.prepare(`
+          INSERT INTO mojing_profile (nickname, current_title) VALUES (?, ?)
+        `).run('故事编织者', '墨境新人');
+      }
+
+      console.log('迁移 v6: 墨境写作成长系统表创建完成');
+    }
   }
 ];
 

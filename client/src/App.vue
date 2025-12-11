@@ -50,6 +50,7 @@ const showMobileNav = computed(() => {
 
 const menuItems = [
   { path: '/', icon: House, title: '首页' },
+  { path: '/mojing', icon: Edit, title: '墨境' },
   { path: '/practice', icon: Edit, title: '写作练习' },
   { path: '/freewrite', icon: Sunrise, title: '随心练习' },
   { path: '/typing', icon: EditPen, title: '抄书练习' },
@@ -65,6 +66,7 @@ const menuItems = [
 
 const activeMenu = computed(() => {
   const path = route.path
+  if (path.startsWith('/mojing')) return '/mojing'
   if (path.startsWith('/practice')) return '/practice'
   if (path.startsWith('/freewrite')) return '/freewrite'
   if (path.startsWith('/typing')) return '/typing'

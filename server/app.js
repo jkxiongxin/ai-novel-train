@@ -17,6 +17,10 @@ const typingRoutes = require('./routes/typing');
 const freewriteRoutes = require('./routes/freewrite');
 const wordPracticeRoutes = require('./routes/wordPractice');
 const skillsRoutes = require('./routes/skills');
+const mojingRoutes = require('./routes/mojing');
+
+// 导入墨境调度服务
+const { startScheduler } = require('./services/schedulerService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,6 +44,7 @@ app.use('/api/typing', typingRoutes);
 app.use('/api/freewrite', freewriteRoutes);
 app.use('/api/word-practice', wordPracticeRoutes);
 app.use('/api/skills', skillsRoutes);
+app.use('/api/mojing', mojingRoutes);
 
 // 静态文件服务（生产环境）
 if (process.env.NODE_ENV === 'production') {
@@ -65,6 +70,13 @@ initDatabase()
   .then(() => {
     app.listen(PORT, () => {
       console.log(`服务器运行在 http://localhost:${PORT}`);
+      
+      // 启动墨境调度器
+      try {
+        startScheduler();
+      } catch (e) {
+        console.warn('墨境调度器启动失败（可能缺少 node-cron 依赖）:', e.message);
+      }
     });
   })
   .catch((err) => {

@@ -205,6 +205,49 @@ const routes = [
     name: 'SkillEvaluation',
     component: () => import('../views/Skills/Evaluation.vue'),
     meta: { title: '练习评审' }
+  },
+  // 墨境游戏化模块路由
+  {
+    path: '/mojing',
+    name: 'MoJing',
+    component: () => import('../views/MoJing/Index.vue'),
+    meta: { title: '墨境' }
+  },
+  {
+    path: '/mojing/tasks',
+    name: 'MoJingTasks',
+    component: () => import('../views/MoJing/Tasks.vue'),
+    meta: { title: '今日任务' }
+  },
+  {
+    path: '/mojing/profile',
+    name: 'MoJingProfile',
+    component: () => import('../views/MoJing/Profile.vue'),
+    meta: { title: '我的墨境' }
+  },
+  {
+    path: '/mojing/task/:id',
+    name: 'MoJingTask',
+    component: () => import('../views/MoJing/TaskDetail.vue'),
+    meta: { title: '墨境任务' }
+  },
+  {
+    path: '/mojing/achievements',
+    name: 'MoJingAchievements',
+    component: () => import('../views/MoJing/Achievements.vue'),
+    meta: { title: '成就墙' }
+  },
+  {
+    path: '/mojing/history',
+    name: 'MoJingHistory',
+    component: () => import('../views/MoJing/History.vue'),
+    meta: { title: '成长记录' }
+  },
+  {
+    path: '/mojing/weekly',
+    name: 'MoJingWeekly',
+    component: () => import('../views/MoJing/Weekly.vue'),
+    meta: { title: '墨章挑战' }
   }
 ]
 

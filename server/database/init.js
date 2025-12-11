@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const { seedDefaultPrompts } = require('./seeds/prompts');
 const { runMigrations, getMigrationStatus } = require('./migrations');
+const { seedMojingData } = require('./seeds/mojing');
 
 // 支持通过环境变量自定义数据库路径（用于 Electron 桌面版）
 const getDbPath = () => {
@@ -523,6 +524,19 @@ async function initDatabase() {
   
   if (migrationResult.migrationsApplied > 0) {
     console.log(`成功应用 ${migrationResult.migrationsApplied} 个迁移，数据库版本: ${migrationResult.fromVersion} -> ${migrationResult.toVersion}`);
+  }
+
+  // 初始化墨境种子数据（如果表存在）
+  try {
+    const hasMojingTables = db.prepare(`
+      SELECT name FROM sqlite_master WHERE type='table' AND name='mojing_task_templates'
+    `).get();
+    
+    if (hasMojingTables) {
+      seedMojingData(db);
+    }
+  } catch (e) {
+    console.warn('墨境种子数据初始化跳过:', e.message);
   }
 
   console.log('数据库初始化完成');
