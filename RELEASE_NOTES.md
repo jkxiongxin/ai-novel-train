@@ -17,6 +17,6 @@
 
 ### 📦 下载
 
-- **macOS (Apple Silicon)**: `AI-Novel-Trainer-1.0.4-alpha-mac-arm64.dmg`
-- **macOS (Intel)**: `AI-Novel-Trainer-1.0.4-alpha-mac-x64.dmg`
-- **Windows 安装程序**: `AI-Novel-Trainer-1.0.4-alpha-win-x64.exe`
+- **macOS (Apple Silicon)**: `AI-Novel-Trainer-1.0.5-alpha-mac-arm64.dmg`
+- **macOS (Intel)**: `AI-Novel-Trainer-1.0.5-alpha-mac-x64.dmg`
+- **Windows 安装程序**: `AI-Novel-Trainer-1.0.5-alpha-win-x64.exe`
