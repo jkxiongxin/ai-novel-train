@@ -14,3 +14,15 @@
 - **macOS (Apple Silicon)**: `AI-Novel-Trainer-1.0.4-alpha-mac-arm64.dmg`
 - **macOS (Intel)**: `AI-Novel-Trainer-1.0.4-alpha-mac-x64.dmg`
 - **Windows 安装程序**: `AI-Novel-Trainer-1.0.4-alpha-win-x64.exe`
+
+---
+
+## [v1.0.4-alpha] - 2025-12-10
+
+### 📦 下载
+
+- **ARM64 Mac 更新包 (自动更新用)**: `desktop/dist/AI网文训练师-1.0.4-alpha-arm64-mac.zip`
+- **Intel Mac 更新包 (自动更新用)**: `desktop/dist/AI网文训练师-1.0.4-alpha-mac.zip`
+- **macOS (Apple Silicon)**: `desktop/dist/AI网文训练师-1.0.4-alpha-arm64.dmg`
+- **macOS (Intel)**: `desktop/dist/AI网文训练师-1.0.4-alpha.dmg`
+- **Windows 安装程序**: `desktop/dist/AI网文训练师 Setup 1.0.4-alpha.exe`
