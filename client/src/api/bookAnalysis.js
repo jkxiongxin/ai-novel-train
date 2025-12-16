@@ -172,3 +172,40 @@ export function saveMaskPracticeDraft(practiceId, data) {
 export function submitMaskPractice(practiceId, data) {
   return request.post(`/book-analysis/mask-practice/${practiceId}/submit`, data)
 }
+
+// ==================== 手动抄写片段 API ====================
+
+/**
+ * 保存手动抄写片段
+ */
+export function saveTypingExcerpts(chapterId, excerpts) {
+  return request.post(`/book-analysis/typing-excerpts/${chapterId}`, { excerpts })
+}
+
+/**
+ * 获取章节的手动抄写片段
+ */
+export function getTypingExcerpts(chapterId) {
+  return request.get(`/book-analysis/typing-excerpts/${chapterId}`)
+}
+
+/**
+ * 从手动片段创建抄写练习
+ */
+export function createTypingPracticeFromExcerpt(excerptId) {
+  return request.post(`/book-analysis/typing-excerpts/${excerptId}/create-practice`)
+}
+
+/**
+ * 批量从手动片段创建抄写练习
+ */
+export function batchCreateTypingPractices(excerptIds) {
+  return request.post('/book-analysis/typing-excerpts/batch-create-practice', { excerpt_ids: excerptIds })
+}
+
+/**
+ * 删除手动抄写片段
+ */
+export function deleteTypingExcerpt(excerptId) {
+  return request.delete(`/book-analysis/typing-excerpts/${excerptId}`)
+}

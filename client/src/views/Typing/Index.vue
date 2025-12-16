@@ -12,7 +12,7 @@ import {
   createCustomTyping,
   createFromChapter
 } from '../../api/typing'
-import { getSegmentTypes, getWritingStyles, getSegments, getChapters, getNovelNames } from '../../api/chapters'
+import { getSegmentTypes, getWritingStyles, getSegments, getChapters, getNovelNames, deleteSegment } from '../../api/chapters'
 
 const router = useRouter()
 const loading = ref(false)
@@ -38,8 +38,15 @@ const writingStyles = ref({})
 const filters = ref({
   status: '',
   segment_type: '',
-  writing_style: ''
+  writing_style: '',
+  tag: ''
 })
+
+// 常用标签选项（用于筛选）
+const commonTagOptions = [
+  '精彩对话', '细腻描写', '心理刻画', '动作场面', '环境渲染', '名句金句',
+  '悲伤', '激烈', '温馨', '幽默', '紧张', '感人', '优美', '深刻'
+]
 
 // 片段选择对话框
 const segmentDialogVisible = ref(false)
@@ -163,6 +170,17 @@ function handleFilterChange() {
   loadPractices()
 }
 
+// 判断片段是否可删除：手动片段（style_tags 对象包含 _manual_excerpt）或手动添加时 style_tags 是数组
+function isSegmentDeletable(segment) {
+  if (!segment || !segment.style_tags) return false
+  try {
+    // style_tags 可能是数组或对象
+    if (Array.isArray(segment.style_tags)) return true
+    if (typeof segment.style_tags === 'object' && segment.style_tags._manual_excerpt) return true
+  } catch (e) {}
+  return false
+}
+
 function startPractice(row) {
   router.push(`/typing/${row.id}`)
 }
@@ -200,6 +218,21 @@ async function handleSelectSegment(segment) {
     router.push(`/typing/${res.data.id}`)
   } catch (error) {
     console.error('创建练习失败:', error)
+  }
+}
+
+// 在片段选择对话框中删除片段（仅限手动添加的片段）
+async function handleDeleteSegmentInDialog(segment) {
+  try {
+    await ElMessageBox.confirm('确定要删除这个片段吗？', '确认删除', { type: 'warning' })
+    await deleteSegment(segment.id)
+    ElMessage.success('删除成功')
+    await loadSegments()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除失败：', error)
+      ElMessage.error('删除失败')
+    }
   }
 }
 
@@ -430,6 +463,21 @@ onMounted(() => {
             :value="key"
           />
         </el-select>
+        <el-select 
+          v-model="filters.tag" 
+          placeholder="标签筛选" 
+          @change="handleFilterChange"
+          clearable
+          filterable
+          allow-create
+        >
+          <el-option
+            v-for="tag in commonTagOptions"
+            :key="tag"
+            :label="tag"
+            :value="tag"
+          />
+        </el-select>
       </div>
     </el-card>
 
@@ -451,6 +499,26 @@ onMounted(() => {
         <el-table-column prop="writing_style" label="文风" width="100">
           <template #default="{ row }">
             {{ getWritingStyleName(row.writing_style) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="标签" width="150">
+          <template #default="{ row }">
+            <div class="tag-list" v-if="row.tags && row.tags.length > 0">
+              <el-tag 
+                v-for="tag in row.tags.slice(0, 2)" 
+                :key="tag" 
+                size="small" 
+                effect="plain" 
+                type="success"
+                style="margin-right: 4px;"
+              >
+                {{ tag }}
+              </el-tag>
+              <el-tooltip v-if="row.tags.length > 2" :content="row.tags.join(', ')" placement="top">
+                <el-tag size="small" effect="plain">+{{ row.tags.length - 2 }}</el-tag>
+              </el-tooltip>
+            </div>
+            <span v-else class="no-tag">-</span>
           </template>
         </el-table-column>
         <el-table-column prop="word_count" label="字数" width="80" />
@@ -559,6 +627,18 @@ onMounted(() => {
               来自：{{ segment.chapter_title }}
             </span>
             <span class="segment-words">{{ segment.word_count }}字</span>
+
+            <div class="segment-actions" style="margin-left: auto; display: flex; gap: 8px;">
+              <!-- 如果是手动片段或风格标签类型为数组（来自手动添加），显示删除按钮 -->
+              <el-button
+                size="mini"
+                type="danger"
+                icon="Delete"
+                link
+                @click.stop.prevent="handleDeleteSegmentInDialog(segment)" :icon="Delete">
+                删除
+              </el-button>
+            </div>
           </div>
           <div class="segment-content">
             {{ segment.content.slice(0, 150) }}{{ segment.content.length > 150 ? '...' : '' }}
@@ -873,6 +953,16 @@ onMounted(() => {
 .chapter-pagination {
   margin-top: 16px;
   justify-content: center;
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.no-tag {
+  color: #c0c4cc;
 }
 
 @media (max-width: 1200px) {

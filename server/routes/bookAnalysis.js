@@ -1633,4 +1633,273 @@ router.post('/mask-practice/:practiceId/submit', async (req, res) => {
   }
 });
 
+// ==================== 手动抄写片段 API ====================
+
+/**
+ * 保存手动抄写片段
+ */
+router.post('/typing-excerpts/:chapterId', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { chapterId } = req.params;
+    const { excerpts } = req.body;
+
+    if (!Array.isArray(excerpts)) {
+      return res.status(400).json({
+        success: false,
+        message: '请提供片段数组'
+      });
+    }
+
+    // 检查章节是否存在
+    const chapter = db.prepare('SELECT id, content FROM novel_chapters WHERE id = ?').get(chapterId);
+    if (!chapter) {
+      return res.status(404).json({
+        success: false,
+        message: '章节不存在'
+      });
+    }
+
+    // 获取段落数组
+    const paragraphs = String(chapter.content || '')
+      .split(/\r?\n/)
+      .map(p => p.trim())
+      .filter(p => p.length > 0);
+
+    // 删除该章节之前的手动片段
+    db.prepare(`
+      DELETE FROM chapter_segments 
+      WHERE chapter_id = ? AND style_tags LIKE '%"_manual_excerpt":true%'
+    `).run(chapterId);
+
+    // 批量插入新片段
+    const insertStmt = db.prepare(`
+      INSERT INTO chapter_segments 
+      (chapter_id, segment_order, content, word_count, segment_type, writing_style, style_tags, difficulty)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const insertedIds = [];
+    for (let i = 0; i < excerpts.length; i++) {
+      const excerpt = excerpts[i];
+      
+      // 从段落范围提取内容
+      let content = excerpt.content;
+      if (!content && excerpt.paragraph_start && excerpt.paragraph_end) {
+        const startIdx = Math.max(0, excerpt.paragraph_start - 1);
+        const endIdx = Math.min(paragraphs.length, excerpt.paragraph_end);
+        content = paragraphs.slice(startIdx, endIdx).join('\n');
+      }
+
+      if (!content) continue;
+
+      const wordCount = content.replace(/\s/g, '').length;
+      // 将标签和手动标识合并存储
+      const tagsData = {
+        tags: excerpt.tags || [],
+        _manual_excerpt: true // 标识为手动添加的片段
+      };
+      const result = insertStmt.run(
+        chapterId,
+        i + 1,
+        content,
+        wordCount,
+        excerpt.segment_type || 'narrative',
+        excerpt.writing_style || null,
+        JSON.stringify(tagsData),
+        excerpt.difficulty || 'medium'
+      );
+      insertedIds.push(result.lastInsertRowid);
+    }
+
+    res.json({
+      success: true,
+      data: { ids: insertedIds, count: insertedIds.length },
+      message: `保存成功，共 ${insertedIds.length} 个抄写片段`
+    });
+  } catch (error) {
+    console.error('保存手动抄写片段失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '保存抄写片段失败',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * 获取章节的手动抄写片段
+ */
+router.get('/typing-excerpts/:chapterId', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { chapterId } = req.params;
+
+    const excerpts = db.prepare(`
+      SELECT id, segment_order, content, word_count, segment_type, writing_style, style_tags, difficulty, created_at
+      FROM chapter_segments
+      WHERE chapter_id = ? AND style_tags LIKE '%"_manual_excerpt":true%'
+      ORDER BY segment_order ASC
+    `).all(chapterId);
+
+    // 解析 style_tags
+    for (const excerpt of excerpts) {
+      try {
+        const tagsData = JSON.parse(excerpt.style_tags || '{}');
+        excerpt.tags = tagsData.tags || [];
+        // 不返回内部标识字段
+        delete excerpt.style_tags;
+      } catch (e) {
+        excerpt.tags = [];
+      }
+    }
+
+    res.json({
+      success: true,
+      data: excerpts
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '获取抄写片段失败',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * 从手动片段创建抄写练习
+ */
+router.post('/typing-excerpts/:excerptId/create-practice', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { excerptId } = req.params;
+
+    const segment = db.prepare(`
+      SELECT * FROM chapter_segments WHERE id = ? AND style_tags LIKE '%"_manual_excerpt":true%'
+    `).get(excerptId);
+
+    if (!segment) {
+      return res.status(404).json({
+        success: false,
+        message: '抄写片段不存在'
+      });
+    }
+
+    // 解析标签获取用户自定义标签
+    let tags = [];
+    try {
+      const tagsData = JSON.parse(segment.style_tags || '{}');
+      tags = tagsData.tags || [];
+    } catch (e) {}
+
+    // 创建抄书练习，保存片段类型和标签
+    const result = db.prepare(`
+      INSERT INTO typing_practices 
+      (segment_id, chapter_id, original_content, segment_type, writing_style, word_count)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      excerptId,
+      segment.chapter_id,
+      segment.content,
+      segment.segment_type || 'narrative',
+      segment.writing_style,
+      segment.word_count
+    );
+
+    res.json({
+      success: true,
+      data: { id: result.lastInsertRowid },
+      message: '抄写练习创建成功'
+    });
+  } catch (error) {
+    console.error('创建抄写练习失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '创建抄写练习失败',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * 批量从手动片段创建抄写练习
+ */
+router.post('/typing-excerpts/batch-create-practice', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { excerpt_ids } = req.body;
+
+    if (!Array.isArray(excerpt_ids) || excerpt_ids.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: '请提供片段ID数组'
+      });
+    }
+
+    const insertStmt = db.prepare(`
+      INSERT INTO typing_practices 
+      (segment_id, chapter_id, original_content, segment_type, writing_style, word_count)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const createdIds = [];
+    for (const excerptId of excerpt_ids) {
+      const segment = db.prepare(`
+        SELECT * FROM chapter_segments WHERE id = ? AND style_tags LIKE '%"_manual_excerpt":true%'
+      `).get(excerptId);
+
+      if (segment) {
+        const result = insertStmt.run(
+          excerptId,
+          segment.chapter_id,
+          segment.content,
+          segment.segment_type || 'narrative',
+          segment.writing_style,
+          segment.word_count
+        );
+        createdIds.push(result.lastInsertRowid);
+      }
+    }
+
+    res.json({
+      success: true,
+      data: { ids: createdIds, count: createdIds.length },
+      message: `成功创建 ${createdIds.length} 个抄写练习`
+    });
+  } catch (error) {
+    console.error('批量创建抄写练习失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '批量创建抄写练习失败',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * 删除手动抄写片段
+ */
+router.delete('/typing-excerpts/:excerptId', (req, res) => {
+  try {
+    const db = getDatabase();
+    const { excerptId } = req.params;
+
+    db.prepare(`
+      DELETE FROM chapter_segments WHERE id = ? AND style_tags LIKE '%"_manual_excerpt":true%'
+    `).run(excerptId);
+
+    res.json({
+      success: true,
+      message: '删除成功'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: '删除失败',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

@@ -2,12 +2,16 @@
 import { ref, onMounted, computed, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft, Plus, Edit, Delete, Check, Close, DocumentCopy } from '@element-plus/icons-vue'
+import { ArrowLeft, Plus, Edit, Delete, Check, Close, DocumentCopy, Tickets } from '@element-plus/icons-vue'
 import {
   getChapterById,
   saveManualAnnotation,
   getManualAnnotation,
-  createOutlinePracticeFromManual
+  createOutlinePracticeFromManual,
+  saveTypingExcerpts,
+  getTypingExcerpts,
+  createTypingPracticeFromExcerpt,
+  batchCreateTypingPractices
 } from '../../api/bookAnalysis'
 
 const router = useRouter()
@@ -22,6 +26,20 @@ const chapterId = route.params.chapterId
 const annotations = ref([])
 const outlineItems = ref([])
 const summary = ref('')
+
+// 抄写片段数据
+const typingExcerpts = ref([])
+const excerptDialogVisible = ref(false)
+const editingExcerptIndex = ref(null)
+const newExcerpt = ref({
+  paragraph_start: null,
+  paragraph_end: null,
+  content: '',
+  segment_type: 'narrative',
+  writing_style: '',
+  tags: [],
+  difficulty: 'medium'
+})
 
 // 编辑状态
 const editingAnnotationId = ref(null)
@@ -73,6 +91,55 @@ const typeColors = {
   '高潮': '#c0392b',
   '转折': '#d35400',
   '过渡': '#95a5a6'
+}
+
+// 片段类型选项（与 AI 分析一致）
+const segmentTypeOptions = [
+  { value: 'dialogue', label: '人物对白', desc: '角色之间的对话内容' },
+  { value: 'emotion', label: '情绪渲染', desc: '情感氛围的描写' },
+  { value: 'battle', label: '战斗场景', desc: '动作打斗场面' },
+  { value: 'psychology', label: '心理活动', desc: '角色内心独白' },
+  { value: 'environment', label: '环境描写', desc: '场景环境描写' },
+  { value: 'plot', label: '情节推进', desc: '故事情节发展' },
+  { value: 'transition', label: '过渡衔接', desc: '段落之间的过渡' },
+  { value: 'narrative', label: '叙事描述', desc: '一般性叙述内容' }
+]
+
+// 文风选项（与 AI 分析一致）
+const writingStyleOptions = [
+  { value: 'concise', label: '简洁明快', desc: '用词精炼，节奏快速' },
+  { value: 'detailed', label: '细腻详尽', desc: '描写细致，铺陈丰富' },
+  { value: 'poetic', label: '诗意唯美', desc: '语言优美，意境深远' },
+  { value: 'humorous', label: '幽默诙谐', desc: '轻松有趣，富有笑点' },
+  { value: 'tense', label: '紧张刺激', desc: '节奏紧凑，悬念感强' },
+  { value: 'lyrical', label: '抒情感人', desc: '情感真挚，打动人心' },
+  { value: 'plain', label: '平实质朴', desc: '语言朴素，贴近生活' },
+  { value: 'grand', label: '大气磅礴', desc: '气势恢宏，格局宏大' }
+]
+
+// 难度选项
+const difficultyOptions = [
+  { value: 'easy', label: '简单' },
+  { value: 'medium', label: '中等' },
+  { value: 'hard', label: '困难' }
+]
+
+// 常用标签选项
+const commonTagOptions = [
+  '精彩对话', '细腻描写', '心理刻画', '动作场面', '环境渲染', '名句金句',
+  '悲伤', '激烈', '温馨', '幽默', '紧张', '感人', '优美', '深刻'
+]
+
+// 获取片段类型名称
+function getSegmentTypeName(type) {
+  const opt = segmentTypeOptions.find(o => o.value === type)
+  return opt ? opt.label : type || '叙事描述'
+}
+
+// 获取文风名称
+function getWritingStyleName(style) {
+  const opt = writingStyleOptions.find(o => o.value === style)
+  return opt ? opt.label : style || ''
 }
 
 function getAnnotationColor(type) {
@@ -322,6 +389,203 @@ function moveOutline(index, direction) {
   autoSave()
 }
 
+// ==================== 抄写片段相关方法 ====================
+
+// 打开添加抄写片段对话框
+function openAddExcerptDialog() {
+  if (!selectedRange.value) {
+    ElMessage.warning('请先选择要作为抄写片段的段落范围')
+    return
+  }
+  dialogMode.value = 'add'
+  editingExcerptIndex.value = null
+  newExcerpt.value = {
+    paragraph_start: selectedRange.value.start,
+    paragraph_end: selectedRange.value.end,
+    content: selectedText.value,
+    segment_type: 'narrative',
+    writing_style: '',
+    tags: [],
+    difficulty: 'medium'
+  }
+  excerptDialogVisible.value = true
+}
+
+// 编辑抄写片段
+function openEditExcerptDialog(excerpt, index) {
+  dialogMode.value = 'edit'
+  editingExcerptIndex.value = index
+  selectionStart.value = excerpt.paragraph_start
+  selectionEnd.value = excerpt.paragraph_end
+  newExcerpt.value = {
+    paragraph_start: excerpt.paragraph_start,
+    paragraph_end: excerpt.paragraph_end,
+    content: excerpt.content,
+    segment_type: excerpt.segment_type || 'narrative',
+    writing_style: excerpt.writing_style || '',
+    tags: excerpt.tags || [],
+    difficulty: excerpt.difficulty || 'medium'
+  }
+  excerptDialogVisible.value = true
+}
+
+// 保存抄写片段
+function saveExcerpt() {
+  if (!newExcerpt.value.content.trim()) {
+    ElMessage.warning('片段内容不能为空')
+    return
+  }
+
+  const excerptData = {
+    paragraph_start: newExcerpt.value.paragraph_start,
+    paragraph_end: newExcerpt.value.paragraph_end,
+    content: newExcerpt.value.content,
+    segment_type: newExcerpt.value.segment_type,
+    writing_style: newExcerpt.value.writing_style,
+    tags: newExcerpt.value.tags,
+    difficulty: newExcerpt.value.difficulty,
+    word_count: newExcerpt.value.content.replace(/\s/g, '').length
+  }
+
+  if (dialogMode.value === 'add') {
+    typingExcerpts.value.push(excerptData)
+  } else {
+    typingExcerpts.value[editingExcerptIndex.value] = excerptData
+  }
+
+  excerptDialogVisible.value = false
+  selectionStart.value = null
+  selectionEnd.value = null
+  editingExcerptIndex.value = null
+  
+  autoSaveExcerpts()
+}
+
+// 删除抄写片段
+async function deleteExcerpt(index) {
+  try {
+    await ElMessageBox.confirm('确定要删除这个抄写片段吗？', '确认删除', { type: 'warning' })
+    typingExcerpts.value.splice(index, 1)
+    autoSaveExcerpts()
+  } catch (e) {
+    // 取消
+  }
+}
+
+// 移动抄写片段顺序
+function moveExcerpt(index, direction) {
+  const newIndex = index + direction
+  if (newIndex < 0 || newIndex >= typingExcerpts.value.length) return
+  
+  const temp = typingExcerpts.value[index]
+  typingExcerpts.value[index] = typingExcerpts.value[newIndex]
+  typingExcerpts.value[newIndex] = temp
+  
+  autoSaveExcerpts()
+}
+
+// 自动保存抄写片段
+let excerptSaveTimer = null
+
+async function autoSaveExcerpts() {
+  if (excerptSaveTimer) {
+    clearTimeout(excerptSaveTimer)
+  }
+  excerptSaveTimer = setTimeout(async () => {
+    try {
+      await saveTypingExcerpts(chapterId, typingExcerpts.value)
+    } catch (error) {
+      console.error('保存抄写片段失败:', error)
+    }
+  }, 2000)
+}
+
+// 从片段创建抄写练习
+async function createTypingPractice(excerpt, index) {
+  try {
+    // 先保存确保有ID
+    if (!excerpt.id) {
+      await saveTypingExcerpts(chapterId, typingExcerpts.value)
+      const res = await getTypingExcerpts(chapterId)
+      if (res.data && res.data[index]) {
+        excerpt.id = res.data[index].id
+      }
+    }
+    
+    if (!excerpt.id) {
+      ElMessage.error('无法获取片段ID，请刷新后重试')
+      return
+    }
+    
+    const res = await createTypingPracticeFromExcerpt(excerpt.id)
+    ElMessage.success('抄写练习创建成功')
+    router.push(`/typing/${res.data.id}`)
+  } catch (error) {
+    console.error('创建抄写练习失败:', error)
+    ElMessage.error('创建抄写练习失败: ' + (error.message || '未知错误'))
+  }
+}
+
+// 批量创建抄写练习
+async function batchCreateTypingPractice() {
+  if (typingExcerpts.value.length === 0) {
+    ElMessage.warning('暂无抄写片段')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `确定要为全部 ${typingExcerpts.value.length} 个片段创建抄写练习吗？`,
+      '批量创建',
+      { type: 'info' }
+    )
+
+    // 先保存确保有ID
+    await saveTypingExcerpts(chapterId, typingExcerpts.value)
+    const excerptRes = await getTypingExcerpts(chapterId)
+    const excerptIds = excerptRes.data.map(e => e.id)
+    
+    if (excerptIds.length === 0) {
+      ElMessage.error('没有可用的抄写片段')
+      return
+    }
+
+    const res = await batchCreateTypingPractices(excerptIds)
+    ElMessage.success(`成功创建 ${res.data.count} 个抄写练习`)
+    router.push('/typing')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('批量创建失败:', error)
+      ElMessage.error('批量创建失败: ' + (error.message || '未知错误'))
+    }
+  }
+}
+
+// 从选中段落快速添加抄写片段
+function quickAddExcerpt() {
+  if (!selectedRange.value) {
+    ElMessage.warning('请先选择段落范围')
+    return
+  }
+  
+  const excerptData = {
+    paragraph_start: selectedRange.value.start,
+    paragraph_end: selectedRange.value.end,
+    content: selectedText.value,
+    segment_type: 'narrative',
+    writing_style: '',
+    tags: [],
+    difficulty: 'medium',
+    word_count: selectedText.value.replace(/\s/g, '').length
+  }
+  
+  typingExcerpts.value.push(excerptData)
+  selectionStart.value = null
+  selectionEnd.value = null
+  ElMessage.success('已添加抄写片段')
+  autoSaveExcerpts()
+}
+
 // 自动保存定时器
 let autoSaveTimer = null
 
@@ -362,9 +626,10 @@ async function saveData(silent = false) {
 async function loadData() {
   loading.value = true
   try {
-    const [chapterRes, annotationRes] = await Promise.all([
+    const [chapterRes, annotationRes, excerptsRes] = await Promise.all([
       getChapterById(chapterId),
-      getManualAnnotation(chapterId).catch(() => ({ data: null }))
+      getManualAnnotation(chapterId).catch(() => ({ data: null })),
+      getTypingExcerpts(chapterId).catch(() => ({ data: [] }))
     ])
 
     chapter.value = chapterRes.data
@@ -374,6 +639,21 @@ async function loadData() {
       annotations.value = annotationRes.data.annotations || []
       outlineItems.value = annotationRes.data.outline || []
       summary.value = annotationRes.data.summary || ''
+    }
+
+    // 加载抄写片段
+    if (excerptsRes.data && excerptsRes.data.length > 0) {
+      typingExcerpts.value = excerptsRes.data.map(e => ({
+        id: e.id,
+        paragraph_start: null, // 从数据库取出的可能没有段落信息
+        paragraph_end: null,
+        content: e.content,
+        segment_type: e.segment_type || 'narrative',
+        writing_style: e.writing_style || '',
+        tags: e.tags || [],
+        difficulty: e.difficulty || 'medium',
+        word_count: e.word_count
+      }))
     }
   } catch (error) {
     console.error('加载数据失败:', error)
@@ -495,6 +775,9 @@ onMounted(() => {
           <div class="selection-actions">
             <el-button type="primary" size="small" :icon="Plus" @click="openAddAnnotationDialog">
               添加批注
+            </el-button>
+            <el-button type="success" size="small" :icon="Tickets" @click="quickAddExcerpt">
+              添加抄写片段
             </el-button>
             <el-button size="small" @click="clearSelection">取消选择</el-button>
           </div>
@@ -620,6 +903,64 @@ onMounted(() => {
 
           <el-empty v-else description="暂无细纲，请添加或从批注生成" :image-size="60" />
         </div>
+
+        <!-- 抄写片段列表 -->
+        <div class="excerpts-section">
+          <div class="section-header">
+            <span>✏️ 抄写片段</span>
+            <div class="section-actions">
+              <el-button 
+                size="small" 
+                type="success" 
+                link 
+                @click="batchCreateTypingPractice" 
+                :disabled="typingExcerpts.length === 0"
+              >
+                全部开始抄写
+              </el-button>
+              <el-button size="small" type="primary" :icon="Plus" @click="openAddExcerptDialog" :disabled="!selectedRange">
+                添加
+              </el-button>
+            </div>
+          </div>
+
+          <div class="tip-text-small" v-if="typingExcerpts.length === 0 && !selectedRange">
+            💡 选择段落后可添加抄写片段
+          </div>
+
+          <div class="excerpts-list" v-if="typingExcerpts.length > 0">
+            <div v-for="(excerpt, idx) in typingExcerpts" :key="idx" class="excerpt-item">
+              <div class="excerpt-order">{{ idx + 1 }}</div>
+              <div class="excerpt-body">
+                <p class="excerpt-preview">
+                  {{ excerpt.content.slice(0, 60) }}{{ excerpt.content.length > 60 ? '...' : '' }}
+                </p>
+                <div class="excerpt-meta">
+                  <span class="excerpt-words">{{ excerpt.word_count || excerpt.content.replace(/\s/g, '').length }} 字</span>
+                  <el-tag size="small">{{ getSegmentTypeName(excerpt.segment_type) }}</el-tag>
+                  <el-tag v-if="excerpt.writing_style" size="small" type="info">{{ getWritingStyleName(excerpt.writing_style) }}</el-tag>
+                  <el-tag v-if="excerpt.difficulty" size="small" :type="excerpt.difficulty === 'hard' ? 'danger' : excerpt.difficulty === 'easy' ? 'success' : 'warning'">
+                    {{ excerpt.difficulty === 'easy' ? '简单' : excerpt.difficulty === 'hard' ? '困难' : '中等' }}
+                  </el-tag>
+                </div>
+                <div class="excerpt-tags" v-if="excerpt.tags && excerpt.tags.length > 0">
+                  <el-tag v-for="tag in excerpt.tags" :key="tag" size="small" effect="plain" type="success">
+                    {{ tag }}
+                  </el-tag>
+                </div>
+              </div>
+              <div class="excerpt-actions">
+                <el-button size="small" link @click="moveExcerpt(idx, -1)" :disabled="idx === 0">↑</el-button>
+                <el-button size="small" link @click="moveExcerpt(idx, 1)" :disabled="idx === typingExcerpts.length - 1">↓</el-button>
+                <el-button size="small" type="success" link @click="createTypingPractice(excerpt, idx)">抄写</el-button>
+                <el-button size="small" link :icon="Edit" @click="openEditExcerptDialog(excerpt, idx)" />
+                <el-button size="small" type="danger" link :icon="Delete" @click="deleteExcerpt(idx)" />
+              </div>
+            </div>
+          </div>
+
+          <el-empty v-else-if="typingExcerpts.length === 0 && selectedRange" description="点击上方「添加」按钮添加抄写片段" :image-size="60" />
+        </div>
       </div>
     </div>
 
@@ -710,6 +1051,105 @@ onMounted(() => {
       <template #footer>
         <el-button @click="outlineDialogVisible = false">取消</el-button>
         <el-button type="primary" @click="saveOutline">
+          {{ dialogMode === 'add' ? '添加' : '保存' }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 添加/编辑抄写片段对话框 -->
+    <el-dialog
+      v-model="excerptDialogVisible"
+      :title="dialogMode === 'add' ? '添加抄写片段' : '编辑抄写片段'"
+      width="550px"
+    >
+      <div class="dialog-content">
+        <div class="selected-range-info" v-if="newExcerpt.paragraph_start">
+          <strong>段落范围：</strong>P{{ newExcerpt.paragraph_start }}{{ newExcerpt.paragraph_end !== newExcerpt.paragraph_start ? `-P${newExcerpt.paragraph_end}` : '' }}
+          <span class="excerpt-word-count">（{{ newExcerpt.content.replace(/\s/g, '').length }} 字）</span>
+        </div>
+
+        <el-form label-position="top">
+          <el-form-item label="片段内容" required>
+            <el-input 
+              v-model="newExcerpt.content" 
+              type="textarea" 
+              :rows="6" 
+              placeholder="抄写片段的内容..."
+            />
+          </el-form-item>
+
+          <el-row :gutter="16">
+            <el-col :span="12">
+              <el-form-item label="片段类型">
+                <el-select v-model="newExcerpt.segment_type" placeholder="选择类型">
+                  <el-option 
+                    v-for="opt in segmentTypeOptions" 
+                    :key="opt.value" 
+                    :value="opt.value" 
+                    :label="opt.label"
+                  >
+                    <span>{{ opt.label }}</span>
+                    <span style="color: #909399; font-size: 12px; margin-left: 8px;">{{ opt.desc }}</span>
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
+              <el-form-item label="难度">
+                <el-select v-model="newExcerpt.difficulty" placeholder="选择难度">
+                  <el-option 
+                    v-for="opt in difficultyOptions" 
+                    :key="opt.value" 
+                    :value="opt.value" 
+                    :label="opt.label"
+                  />
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-row :gutter="16">
+            <el-col :span="24">
+              <el-form-item label="文风类型（可选）">
+                <el-select v-model="newExcerpt.writing_style" placeholder="选择文风" clearable style="width: 100%">
+                  <el-option 
+                    v-for="opt in writingStyleOptions" 
+                    :key="opt.value" 
+                    :value="opt.value" 
+                    :label="opt.label"
+                  >
+                    <span>{{ opt.label }}</span>
+                    <span style="color: #909399; font-size: 12px; margin-left: 8px;">{{ opt.desc }}</span>
+                  </el-option>
+                </el-select>
+              </el-form-item>
+            </el-col>
+          </el-row>
+
+          <el-form-item label="标签（可选）">
+            <el-select 
+              v-model="newExcerpt.tags" 
+              multiple 
+              filterable 
+              allow-create 
+              default-first-option
+              placeholder="添加标签，可自定义输入..."
+              style="width: 100%"
+            >
+              <el-option 
+                v-for="tag in commonTagOptions" 
+                :key="tag" 
+                :value="tag" 
+                :label="tag" 
+              />
+            </el-select>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <template #footer>
+        <el-button @click="excerptDialogVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveExcerpt">
           {{ dialogMode === 'add' ? '添加' : '保存' }}
         </el-button>
       </template>
@@ -1063,6 +1503,99 @@ onMounted(() => {
   display: flex;
   gap: 0;
   flex-shrink: 0;
+}
+
+/* 抄写片段区块 */
+.excerpts-section {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  padding: 16px;
+}
+
+.tip-text-small {
+  font-size: 12px;
+  color: #909399;
+  padding: 8px 0;
+}
+
+.excerpts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.excerpt-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: linear-gradient(135deg, #67c23a10 0%, #85ce6110 100%);
+  border-radius: 8px;
+  border-left: 3px solid #67c23a;
+  transition: all 0.2s;
+}
+
+.excerpt-item:hover {
+  background: linear-gradient(135deg, #67c23a18 0%, #85ce6118 100%);
+}
+
+.excerpt-order {
+  width: 24px;
+  height: 24px;
+  background: #67c23a;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.excerpt-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.excerpt-preview {
+  margin: 0 0 6px 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #303133;
+}
+
+.excerpt-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.excerpt-words {
+  font-size: 11px;
+  color: #909399;
+}
+
+.excerpt-actions {
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.excerpt-word-count {
+  font-size: 12px;
+  color: #67c23a;
+  margin-left: 8px;
+}
+
+.excerpt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
 }
 
 /* 对话框 */

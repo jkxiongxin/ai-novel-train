@@ -1184,10 +1184,7 @@ const migrations = [
         console.log('迁移 v11: 已添加 masked_blocks 字段');
       }
 
-      // 创建索引
-      db.exec(`
-        CREATE INDEX IF NOT EXISTS idx_outline_practice_type ON outline_to_text_practices(practice_type);
-      `);
+      // 不再为 practice_type 创建索引，因为该字段选择性较低，仅有 'outline' 和 'mask' 两个值
 
       console.log('迁移 v11: 遮蔽练习功能添加完成');
     }

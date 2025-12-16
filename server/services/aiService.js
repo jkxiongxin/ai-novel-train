@@ -168,7 +168,7 @@ async function callAI(options) {
     const lowerProvider = String(providerType || '').toLowerCase();
     const lowerModel = String(model || '').toLowerCase();
     const lowerBaseUrl = String(baseUrl || '').toLowerCase();
-    const isQwenModel = lowerModel.includes('qwen3') && baseUrl.contains('modelscope');
+    const isQwenModel = lowerModel.includes('qwen3') && lowerBaseUrl.includes('modelscope');
 
     if (isQwenModel) {
       requestBody.enable_thinking = false;

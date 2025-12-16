@@ -22,7 +22,8 @@ router.get('/', (req, res) => {
       pageSize = 20, 
       status, 
       segment_type, 
-      writing_style 
+      writing_style,
+      tag
     } = req.query;
 
     const useChapterId = hasColumn(db, 'typing_practices', 'chapter_id');
@@ -31,6 +32,7 @@ router.get('/', (req, res) => {
       query = `
       SELECT tp.*, 
              cs.chapter_id as segment_chapter_id, 
+             cs.style_tags,
              COALESCE(nc1.title, nc2.title) as chapter_title, 
              COALESCE(nc1.novel_name, nc2.novel_name) as novel_name
       FROM typing_practices tp
@@ -42,40 +44,72 @@ router.get('/', (req, res) => {
     } else {
       // fallback to older schema without typing_practices.chapter_id
       query = `
-      SELECT tp.*, cs.chapter_id as segment_chapter_id, nc.title as chapter_title, nc.novel_name
+      SELECT tp.*, cs.chapter_id as segment_chapter_id, cs.style_tags, nc.title as chapter_title, nc.novel_name
       FROM typing_practices tp
       LEFT JOIN chapter_segments cs ON tp.segment_id = cs.id
       LEFT JOIN novel_chapters nc ON cs.chapter_id = nc.id
       WHERE 1=1
     `;
     }
-    let countQuery = 'SELECT COUNT(*) as total FROM typing_practices WHERE 1=1';
+    let countQuery = `
+      SELECT COUNT(*) as total 
+      FROM typing_practices tp
+      LEFT JOIN chapter_segments cs ON tp.segment_id = cs.id
+      WHERE 1=1
+    `;
     const params = [];
+    const countParams = [];
 
     if (status) {
       query += ' AND tp.status = ?';
-      countQuery += ' AND status = ?';
+      countQuery += ' AND tp.status = ?';
       params.push(status);
+      countParams.push(status);
     }
 
     if (segment_type) {
       query += ' AND tp.segment_type = ?';
-      countQuery += ' AND segment_type = ?';
+      countQuery += ' AND tp.segment_type = ?';
       params.push(segment_type);
+      countParams.push(segment_type);
     }
 
     if (writing_style) {
       query += ' AND tp.writing_style = ?';
-      countQuery += ' AND writing_style = ?';
+      countQuery += ' AND tp.writing_style = ?';
       params.push(writing_style);
+      countParams.push(writing_style);
     }
 
-    const total = db.prepare(countQuery).get(...params).total;
+    // 标签筛选
+    if (tag) {
+      query += ` AND cs.style_tags LIKE ?`;
+      countQuery += ` AND cs.style_tags LIKE ?`;
+      params.push(`%"${tag}"%`);
+      countParams.push(`%"${tag}"%`);
+    }
+
+    const total = db.prepare(countQuery).get(...countParams).total;
 
     query += ' ORDER BY tp.created_at DESC LIMIT ? OFFSET ?';
     const offset = (parseInt(page) - 1) * parseInt(pageSize);
 
     const practices = db.prepare(query).all(...params, parseInt(pageSize), offset);
+
+    // 解析标签
+    for (const practice of practices) {
+      if (practice.style_tags) {
+        try {
+          const tagsData = JSON.parse(practice.style_tags);
+          practice.tags = tagsData.tags || (Array.isArray(tagsData) ? tagsData : []);
+        } catch (e) {
+          practice.tags = [];
+        }
+      } else {
+        practice.tags = [];
+      }
+      delete practice.style_tags;
+    }
 
     res.json({
       success: true,
