@@ -248,6 +248,67 @@ const routes = [
     name: 'MoJingWeekly',
     component: () => import('../views/MoJing/Weekly.vue'),
     meta: { title: '墨章挑战' }
+  },
+  // 拆书学习模块路由
+  {
+    path: '/book-analysis',
+    name: 'BookAnalysis',
+    component: () => import('../views/BookAnalysis/Index.vue'),
+    meta: { title: '拆书学习' }
+  },
+  {
+    path: '/book-analysis/select',
+    name: 'BookAnalysisSelect',
+    component: () => import('../views/BookAnalysis/Select.vue'),
+    meta: { title: '选择章节' }
+  },
+  {
+    path: '/book-analysis/result/:chapterId',
+    name: 'BookAnalysisResult',
+    component: () => import('../views/BookAnalysis/Result.vue'),
+    meta: { title: '拆书结果' }
+  },
+  {
+    path: '/book-analysis/manual/:chapterId',
+    name: 'BookAnalysisManual',
+    component: () => import('../views/BookAnalysis/ManualAnnotation.vue'),
+    meta: { title: '手动拆书批注' }
+  },
+  {
+    path: '/book-analysis/mask-select/:chapterId',
+    name: 'BookAnalysisMaskSelect',
+    component: () => import('../views/BookAnalysis/MaskSelect.vue'),
+    meta: { title: '选择遮蔽区域' }
+  },
+  {
+    path: '/book-analysis/practice/:practiceId',
+    name: 'BookAnalysisPractice',
+    component: () => import('../views/BookAnalysis/Practice.vue'),
+    meta: { title: '细纲成文' }
+  },
+  {
+    path: '/book-analysis/mask-practice/:practiceId',
+    name: 'BookAnalysisMaskPractice',
+    component: () => import('../views/BookAnalysis/MaskPractice.vue'),
+    meta: { title: '遮蔽练习' }
+  },
+  {
+    path: '/book-analysis/mask-practice/:practiceId/result',
+    name: 'BookAnalysisMaskPracticeResult',
+    component: () => import('../views/BookAnalysis/MaskPracticeResult.vue'),
+    meta: { title: '遮蔽练习结果' }
+  },
+  {
+    path: '/book-analysis/practice/:practiceId/result',
+    name: 'BookAnalysisPracticeResult',
+    component: () => import('../views/BookAnalysis/PracticeResult.vue'),
+    meta: { title: '练习结果' }
+  },
+  {
+    path: '/book-analysis/history',
+    name: 'BookAnalysisHistory',
+    component: () => import('../views/BookAnalysis/History.vue'),
+    meta: { title: '练习历史' }
   }
 ]
 

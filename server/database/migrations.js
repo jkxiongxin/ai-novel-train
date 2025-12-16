@@ -870,6 +870,327 @@ const migrations = [
 
       console.log('迁移 v9: 重复成就占位数据清理完成');
     }
+  },
+  {
+    version: 10,
+    name: '拆书学习功能',
+    description: '添加拆书流派配置、章节拆书分析、细纲成文练习相关表',
+    up: (db) => {
+      console.log('迁移 v10: 创建拆书学习相关表...');
+
+      // 创建拆书流派配置表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS book_analysis_styles (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          style_key TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          description TEXT,
+          prompt_template TEXT NOT NULL,
+          example_output TEXT,
+          is_active BOOLEAN DEFAULT 1,
+          sort_order INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      // 创建章节拆书分析结果表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS chapter_book_analysis (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          chapter_id INTEGER NOT NULL,
+          style_key TEXT NOT NULL,
+          analysis_result TEXT NOT NULL,
+          summary TEXT,
+          key_points TEXT,
+          status TEXT DEFAULT 'completed',
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (chapter_id) REFERENCES novel_chapters(id) ON DELETE CASCADE
+        )
+      `);
+
+      // 创建细纲成文练习表
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS outline_to_text_practices (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          analysis_id INTEGER NOT NULL,
+          chapter_id INTEGER NOT NULL,
+          style_key TEXT NOT NULL,
+          outline_content TEXT NOT NULL,
+          user_content TEXT,
+          original_content TEXT NOT NULL,
+          word_count INTEGER DEFAULT 0,
+          time_spent INTEGER DEFAULT 0,
+          status TEXT DEFAULT 'draft',
+          ai_evaluation TEXT,
+          ai_score REAL,
+          started_at DATETIME,
+          submitted_at DATETIME,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (analysis_id) REFERENCES chapter_book_analysis(id) ON DELETE CASCADE,
+          FOREIGN KEY (chapter_id) REFERENCES novel_chapters(id) ON DELETE CASCADE
+        )
+      `);
+
+      // 创建索引
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_book_analysis_chapter ON chapter_book_analysis(chapter_id);
+        CREATE INDEX IF NOT EXISTS idx_book_analysis_style ON chapter_book_analysis(style_key);
+        CREATE INDEX IF NOT EXISTS idx_outline_practice_analysis ON outline_to_text_practices(analysis_id);
+        CREATE INDEX IF NOT EXISTS idx_outline_practice_chapter ON outline_to_text_practices(chapter_id);
+        CREATE INDEX IF NOT EXISTS idx_outline_practice_status ON outline_to_text_practices(status);
+      `);
+
+      // 添加 AI 功能锚点
+      const existingFeature = db.prepare(
+        "SELECT * FROM ai_feature_config WHERE feature_key = 'book_analysis'"
+      ).get();
+      
+      if (!existingFeature) {
+        db.prepare(`
+          INSERT INTO ai_feature_config (feature_key, feature_name, feature_description)
+          VALUES (?, ?, ?)
+        `).run('book_analysis', '拆书分析', 'AI 按不同流派分析章节内容，生成细纲');
+      }
+
+      // 插入默认拆书流派
+      const defaultStyles = [
+        {
+          style_key: 'emotion_flow',
+          name: '情绪流',
+          description: '以情绪变化为主线，分析章节中角色和场景的情感起伏，关注情绪节点和情绪转换',
+          prompt_template: `你是一位专业的小说拆书分析师，擅长"情绪流"分析法。
+
+请用"情绪流"方法分析以下章节内容。情绪流分析关注：
+1. 情绪基调：章节整体的情绪氛围是什么
+2. 情绪节点：标记每个重要的情绪变化点
+3. 情绪曲线：情绪如何起伏变化（平静→紧张→高潮→舒缓等）
+4. 情绪触发：什么事件或对话触发了情绪变化
+5. 情绪表达：作者用什么手法表达情绪（环境烘托、动作描写、内心独白等）
+
+请输出结构化的分析结果，格式如下：
+{
+  "overall_emotion": "整体情绪基调描述",
+  "emotion_curve": "情绪曲线走向（如：平静→期待→紧张→震惊→悲伤→释然）",
+  "emotion_nodes": [
+    {
+      "position": "位置描述（如：开篇/中段/结尾）",
+      "emotion": "情绪类型",
+      "trigger": "触发事件或对话",
+      "expression_method": "情绪表达手法",
+      "key_text": "关键原文片段（50字以内）"
+    }
+  ],
+  "writing_techniques": ["使用的情绪表达技巧列表"],
+  "outline": [
+    {
+      "order": 1,
+      "emotion_state": "情绪状态",
+      "content_summary": "内容概要（用于细纲成文）",
+      "word_count_suggest": "建议字数"
+    }
+  ],
+  "summary": "整体分析总结（100字以内）"
+}`,
+          example_output: null,
+          sort_order: 1
+        },
+        {
+          style_key: 'plot_point_flow',
+          name: '情节点流',
+          description: '以情节发展为主线，分析章节中的关键情节点、冲突、转折和高潮',
+          prompt_template: `你是一位专业的小说拆书分析师，擅长"情节点流"分析法。
+
+请用"情节点流"方法分析以下章节内容。情节点流分析关注：
+1. 情节骨架：章节的主要情节线是什么
+2. 关键情节点：标记每个推动故事发展的情节点
+3. 冲突设置：有哪些冲突（人与人、人与环境、内心冲突等）
+4. 转折点：情节在哪里发生转折
+5. 悬念/钩子：有什么吸引读者继续阅读的元素
+
+请输出结构化的分析结果，格式如下：
+{
+  "main_plot_line": "主情节线描述",
+  "plot_points": [
+    {
+      "order": 1,
+      "type": "类型（起因/发展/冲突/转折/高潮/结局）",
+      "description": "情节点描述",
+      "function": "在故事中的作用",
+      "key_text": "关键原文片段（50字以内）"
+    }
+  ],
+  "conflicts": [
+    {
+      "type": "冲突类型",
+      "parties": "冲突双方",
+      "description": "冲突描述"
+    }
+  ],
+  "turning_points": ["转折点描述列表"],
+  "hooks": ["悬念/钩子列表"],
+  "outline": [
+    {
+      "order": 1,
+      "plot_point": "情节点",
+      "content_summary": "内容概要（用于细纲成文）",
+      "word_count_suggest": "建议字数"
+    }
+  ],
+  "summary": "整体分析总结（100字以内）"
+}`,
+          example_output: null,
+          sort_order: 2
+        },
+        {
+          style_key: 'structure_flow',
+          name: '结构流',
+          description: '以叙事结构为主线，分析章节的组织架构、段落安排和叙事手法',
+          prompt_template: `你是一位专业的小说拆书分析师，擅长"结构流"分析法。
+
+请用"结构流"方法分析以下章节内容。结构流分析关注：
+1. 整体架构：章节采用什么结构（线性/倒叙/插叙/多线并行等）
+2. 段落组织：各段落如何组织，承担什么功能
+3. 视角切换：叙事视角如何变化
+4. 时空安排：时间线和空间场景如何设置
+5. 开头结尾：开篇如何引入，结尾如何收束
+
+请输出结构化的分析结果，格式如下：
+{
+  "narrative_structure": "叙事结构类型及描述",
+  "perspective": "叙事视角分析",
+  "structure_blocks": [
+    {
+      "order": 1,
+      "block_type": "段落类型（引子/铺垫/展开/高潮/过渡/收尾）",
+      "function": "功能描述",
+      "word_ratio": "大约占比",
+      "key_text": "代表性原文片段（50字以内）"
+    }
+  ],
+  "time_space": {
+    "time_flow": "时间流向描述",
+    "space_changes": ["场景变化列表"]
+  },
+  "opening_technique": "开头技法分析",
+  "ending_technique": "结尾技法分析",
+  "outline": [
+    {
+      "order": 1,
+      "structure_role": "结构角色",
+      "content_summary": "内容概要（用于细纲成文）",
+      "word_count_suggest": "建议字数"
+    }
+  ],
+  "summary": "整体分析总结（100字以内）"
+}`,
+          example_output: null,
+          sort_order: 3
+        },
+        {
+          style_key: 'rhythm_flow',
+          name: '节奏流',
+          description: '以叙事节奏为主线，分析章节的快慢张弛、详略安排和阅读体验',
+          prompt_template: `你是一位专业的小说拆书分析师，擅长"节奏流"分析法。
+
+请用"节奏流"方法分析以下章节内容。节奏流分析关注：
+1. 整体节奏：章节的节奏基调是快是慢，是紧凑还是舒缓
+2. 节奏变化：哪里加速、哪里减速、哪里停顿
+3. 详略安排：什么内容详写、什么内容略写，为什么
+4. 句式节奏：长句短句的运用如何影响阅读节奏
+5. 留白与密度：信息密度如何分布，有无留白
+
+请输出结构化的分析结果，格式如下：
+{
+  "overall_rhythm": "整体节奏基调描述",
+  "rhythm_pattern": "节奏模式（如：慢-快-慢、渐进加速、波浪式等）",
+  "rhythm_segments": [
+    {
+      "order": 1,
+      "rhythm_type": "节奏类型（快速/中速/缓慢/停顿）",
+      "technique": "实现手法（对话推进/动作描写/心理描写/环境渲染等）",
+      "detail_level": "详略程度（详/中/略）",
+      "function": "节奏安排的目的",
+      "key_text": "代表性原文片段（50字以内）"
+    }
+  ],
+  "sentence_rhythm": {
+    "short_sentence_usage": "短句运用场景和效果",
+    "long_sentence_usage": "长句运用场景和效果"
+  },
+  "density_analysis": "信息密度分析",
+  "outline": [
+    {
+      "order": 1,
+      "rhythm_type": "节奏类型",
+      "detail_level": "详略程度",
+      "content_summary": "内容概要（用于细纲成文）",
+      "word_count_suggest": "建议字数"
+    }
+  ],
+  "summary": "整体分析总结（100字以内）"
+}`,
+          example_output: null,
+          sort_order: 4
+        }
+      ];
+
+      const insertStyle = db.prepare(`
+        INSERT OR IGNORE INTO book_analysis_styles 
+        (style_key, name, description, prompt_template, example_output, sort_order)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `);
+
+      for (const style of defaultStyles) {
+        insertStyle.run(
+          style.style_key,
+          style.name,
+          style.description,
+          style.prompt_template,
+          style.example_output,
+          style.sort_order
+        );
+      }
+
+      console.log('迁移 v10: 拆书学习相关表创建完成');
+    }
+  },
+  {
+    version: 11,
+    name: '遮蔽练习功能',
+    description: '为细纲成文练习表添加遮蔽练习支持字段',
+    up: (db) => {
+      console.log('迁移 v11: 添加遮蔽练习字段...');
+
+      // 检查并添加 practice_type 字段
+      const columns = db.prepare(`PRAGMA table_info(outline_to_text_practices)`).all();
+      const columnNames = columns.map(c => c.name);
+
+      if (!columnNames.includes('practice_type')) {
+        db.exec(`
+          ALTER TABLE outline_to_text_practices 
+          ADD COLUMN practice_type TEXT DEFAULT 'outline'
+        `);
+        console.log('迁移 v11: 已添加 practice_type 字段');
+      }
+
+      if (!columnNames.includes('masked_blocks')) {
+        db.exec(`
+          ALTER TABLE outline_to_text_practices 
+          ADD COLUMN masked_blocks TEXT
+        `);
+        console.log('迁移 v11: 已添加 masked_blocks 字段');
+      }
+
+      // 创建索引
+      db.exec(`
+        CREATE INDEX IF NOT EXISTS idx_outline_practice_type ON outline_to_text_practices(practice_type);
+      `);
+
+      console.log('迁移 v11: 遮蔽练习功能添加完成');
+    }
   }
 ];
 

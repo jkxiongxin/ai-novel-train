@@ -43,7 +43,7 @@ const maximizeWindow = () => window.electronAPI?.maximizeWindow?.()
 const closeWindow = () => window.electronAPI?.closeWindow?.()
 
 // 需要隐藏底部导航的页面（沉浸式页面）
-const hideNavRoutes = ['/practice/', '/freewrite/do', '/typing/']
+const hideNavRoutes = ['/practice/', '/freewrite/do', '/typing/', '/book-analysis/practice/']
 const showMobileNav = computed(() => {
   return !hideNavRoutes.some(r => route.path.includes(r))
 })
@@ -54,6 +54,7 @@ const menuItems = [
   { path: '/practice', icon: Edit, title: '写作练习' },
   { path: '/freewrite', icon: Sunrise, title: '随心练习' },
   { path: '/typing', icon: EditPen, title: '抄书练习' },
+  { path: '/book-analysis', icon: Reading, title: '拆书学习' },
   { path: '/skills', icon: Document, title: '技巧学习' },
   { path: '/chapters', icon: Notebook, title: '章节管理' },
   { path: '/questions', icon: Document, title: '题库管理' },
@@ -67,6 +68,7 @@ const menuItems = [
 const activeMenu = computed(() => {
   const path = route.path
   if (path.startsWith('/mojing')) return '/mojing'
+  if (path.startsWith('/book-analysis')) return '/book-analysis'
   if (path.startsWith('/practice')) return '/practice'
   if (path.startsWith('/freewrite')) return '/freewrite'
   if (path.startsWith('/typing')) return '/typing'

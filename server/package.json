@@ -1,6 +1,6 @@
 {
   "name": "ai-novel-trainer-server",
-  "version": "1.0.6-alpha",
+  "version": "1.0.7-alpha",
   "description": "AI 网络小说写作训练系统 - 后端服务",
   "main": "app.js",
   "scripts": {

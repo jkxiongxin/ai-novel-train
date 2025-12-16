@@ -168,13 +168,13 @@ async function callAI(options) {
     const lowerProvider = String(providerType || '').toLowerCase();
     const lowerModel = String(model || '').toLowerCase();
     const lowerBaseUrl = String(baseUrl || '').toLowerCase();
-    const isQwenModel = lowerModel.substring('qwen3') != -1;
+    const isQwenModel = lowerModel.includes('qwen3') && baseUrl.contains('modelscope');
 
-    // if (isQwenModel) {
-    //   requestBody.enable_thinking = false;
-    //   requestBody.parameters = Object.assign({}, requestBody.parameters, { enable_thinking: false });
-    //   requestBody.parameter = Object.assign({}, requestBody.parameter, { enable_thinking: false });
-    // }
+    if (isQwenModel) {
+      requestBody.enable_thinking = false;
+      requestBody.parameters = Object.assign({}, requestBody.parameters, { enable_thinking: false });
+      requestBody.parameter = Object.assign({}, requestBody.parameter, { enable_thinking: false });
+    }
 
     // 发送请求（若返回 422 且包含 enable_thinking/parameters 的不支持错误，则重试一次去掉这些字段）
     let response = await fetch(url, {
@@ -190,10 +190,11 @@ async function callAI(options) {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      const rawError = await response.text();
+      // 只读取一次响应体，防止重复读取导致 "Body has already been read" 错误
+      let bodyText = await response.text();
 
       // 如果是 422 且提示关于 enable_thinking/parameters 的不支持错误，尝试重试一次（移除兼容字段）
-      if (response.status === 422 && /enable_thinking|parameters|parameter/.test(rawError)) {
+      if (response.status === 422 && /enable_thinking|parameters|parameter/.test(bodyText)) {
         try {
           const retryBody = Object.assign({}, requestBody);
           delete retryBody.parameters;
@@ -211,14 +212,16 @@ async function callAI(options) {
             body: JSON.stringify(retryBody),
             signal: controller.signal
           });
+
+          // 重新读取新的响应体（注意：这是新的 response）
+          bodyText = await response.text();
         } catch (retryErr) {
-          // 忽略，下面会再次抛出原始错误
+          // 忽略重试错误，下面逻辑会抛出最终错误
         }
       }
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`API 请求失败: ${response.status} - ${error}`);
+        throw new Error(`API 请求失败: ${response.status} - ${bodyText}`);
       }
     }
 
@@ -305,8 +308,20 @@ async function getModelList(options) {
 async function analyzeChapter(content) {
   const config = getConfigForFeature(AI_FEATURES.CHAPTER_ANALYZE);
   
+  // 将章节正文按单个换行符分段并在每段前插入段落序号标记 [P1]、[P2] ...（用于提供给 AI）
+  const rawParagraphs = String(content || '')
+    .split(/\r?\n/)
+    .map(p => p.trim())
+    .filter(p => p.length > 0);
+
+  const numberedParagraphs = rawParagraphs.map((p, idx) => `[P${idx + 1}] ${p}`);
+  const numberedContent = numberedParagraphs.join('\n');
+  
   const systemPrompt = `你是一位专业的小说分析师，擅长分析文本结构和文风特征。
 请将给定的小说章节内容拆分成多个片段，并为每个片段标注类型和文风。
+
+【重要说明 - 段落标记】
+正文已按换行符分段，每段前有标记 [P1], [P2], ... 共 ${rawParagraphs.length} 段。
 
 片段类型（segment_type）包括：
 - dialogue: 人物对白（角色之间的对话内容）
@@ -334,7 +349,8 @@ async function analyzeChapter(content) {
 {
   "segments": [
     {
-      "content": "片段内容",
+      "paragraph_start": 1,
+      "paragraph_end": 3,
       "segment_type": "类型",
       "writing_style": "文风",
       "style_tags": ["标签1", "标签2"],
@@ -344,14 +360,16 @@ async function analyzeChapter(content) {
 }
 
 注意：
-1. 每个片段应该是相对完整的语义单元，通常在100-500字之间
-2. 对话片段应该包含完整的对话上下文
-3. style_tags可以包含更细致的风格标签，如"悲伤"、"激烈"、"温馨"等
-4. 确保返回的是有效的JSON格式`;
+1. **返回值中不要包含段落的完整内容**，只需返回段落序号范围（paragraph_start 和 paragraph_end）以节省 token
+2. 每个片段应该是相对完整的语义单元，通常在100-500字之间
+3. 对话片段应该包含完整的对话上下文
+4. style_tags可以包含更细致的风格标签，如"悲伤"、"激烈"、"温馨"等
+5. 确保返回的是有效的JSON格式
+6. paragraph_start 和 paragraph_end 用数字表示段落范围，如片段包含P1到P3，则 paragraph_start=1, paragraph_end=3`;
 
   const messages = [
     { role: 'system', content: systemPrompt },
-    { role: 'user', content: `请分析以下小说章节内容：\n\n${content}` }
+    { role: 'user', content: `请分析以下小说章节内容（已编号）：\n\n${numberedContent}` }
   ];
 
   const result = await callAI({
@@ -377,11 +395,39 @@ async function analyzeChapter(content) {
     }
     
     const analysisResult = JSON.parse(jsonContent.trim());
-    
+
     if (!analysisResult.segments || !Array.isArray(analysisResult.segments)) {
       throw new Error('分析结果格式错误');
     }
-    
+
+    // 根据段落序号重建片段内容
+    for (const seg of analysisResult.segments) {
+      // 确保 paragraph_start 和 paragraph_end 有效
+      const start = Math.max(1, Math.min(rawParagraphs.length, parseInt(seg.paragraph_start) || 1));
+      const end = Math.max(start, Math.min(rawParagraphs.length, parseInt(seg.paragraph_end) || start));
+      
+      seg.paragraph_start = start;
+      seg.paragraph_end = end;
+      
+      // 根据段落序号重建内容（用原始段落按顺序拼接，段落间保留空行）
+      const parts = [];
+      for (let i = start; i <= end; i++) {
+        if (rawParagraphs[i - 1]) {
+          parts.push(rawParagraphs[i - 1]);
+        }
+      }
+      seg.content = parts.join('\n\n');
+
+      // 确保其他字段存在
+      seg.style_tags = Array.isArray(seg.style_tags) ? seg.style_tags : (seg.style_tags ? [seg.style_tags] : []);
+      seg.difficulty = seg.difficulty || 'medium';
+      seg.segment_type = seg.segment_type || seg.type || 'narrative';
+      seg.writing_style = seg.writing_style || 'plain';
+
+      // 计算单个片段的字数（用于后续入库）
+      seg.word_count = String(seg.content || '').replace(/\s/g, '').length;
+    }
+
     return analysisResult;
   } catch (parseError) {
     console.error('解析AI返回结果失败:', parseError);

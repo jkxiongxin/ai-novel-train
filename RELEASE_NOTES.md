@@ -1,18 +1,17 @@
-## [v1.0.6-alpha] - 2025-12-15
+## [v1.0.7-alpha] - 2025-12-16
 
-### 🎯 墨境优化
-- 等级经验曲线优化：按“写作量”重新缩放等级阈值，估算 Lv6≈100万字、Lv10≈5000万字（基于 0.05 XP/字）
-- 任务题目类型扩展：新增“润色 / 续写”两种题目类型，并由系统掷骰子随机决定每个任务的题目类型
-- 任务定时器优化（每5分钟执行一次）：
-	- 若当天未生成任何任务：优先生成预设任务，不足则一次性 AI 补齐到至少10个
-	- 若超过1小时未生成新任务：自动追加2个 AI 新任务，保证任务持续供给
-	- AI 生成方向更均衡：根据当天任务的六维属性分布，优先补齐覆盖较少的能力
-	- AI 题目去重增强：通过“随机约束词 + 随机种子”降低重复与相似
-	- AI 提供商预设扩展：新增对魔搭（ModelScope）、Cerebras、OpenRouter 的默认支持（可在设置中一键选择）
+### 新增功能
+拆书学习：
+1. 用户可以学习拆书技巧，支持ai拆书以及手动拆书
+2. 支持多种拆书技巧
+3. 支持细纲成文练习
 
-## 下载（v1.0.6-alpha）
+### 优化功能
+1. 优化了章节分析功能，支持长章节分析（超过3w字的章节）
+2. 对魔搭的qwen3系列模型做出了适配优化
 
-- **macOS (Apple Silicon)**: `AI-Novel-Trainer-1.0.6-alpha-mac-arm64.dmg`
-- **macOS (Intel)**: `AI-Novel-Trainer-1.0.6-alpha-mac-x64.dmg`
-- **Windows 安装程序**: `AI-Novel-Trainer-1.0.6-alpha-win-x64.exe`
+## 下载（v1.0.7-alpha）
 
+- **macOS (Apple Silicon)**: `AI-Novel-Trainer-1.0.7-alpha-mac-arm64.dmg`
+- **macOS (Intel)**: `AI-Novel-Trainer-1.0.7-alpha-mac-x64.dmg`
+- **Windows 安装程序**: `AI-Novel-Trainer-1.0.7-alpha-win-x64.exe`

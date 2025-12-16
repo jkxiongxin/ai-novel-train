@@ -18,6 +18,7 @@ const freewriteRoutes = require('./routes/freewrite');
 const wordPracticeRoutes = require('./routes/wordPractice');
 const skillsRoutes = require('./routes/skills');
 const mojingRoutes = require('./routes/mojing');
+const bookAnalysisRoutes = require('./routes/bookAnalysis');
 
 // 导入墨境调度服务
 const { startScheduler } = require('./services/schedulerService');
@@ -45,6 +46,7 @@ app.use('/api/freewrite', freewriteRoutes);
 app.use('/api/word-practice', wordPracticeRoutes);
 app.use('/api/skills', skillsRoutes);
 app.use('/api/mojing', mojingRoutes);
+app.use('/api/book-analysis', bookAnalysisRoutes);
 
 // 静态文件服务（生产环境）
 if (process.env.NODE_ENV === 'production') {
